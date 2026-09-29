@@ -1,23 +1,18 @@
+/* 1440 · 版面照 E（圖錄：大粗字、照片滿版、格子無縫），改成黑底；
+   照片上蓋 B 的橘色日期印字；快門是 A 的 iOS 相機樣式；字體 Lexend */
 :root {
   color-scheme: dark;
-  --bg: #1a1a1c;
-  --shadow-d: #0d0d0e;
-  --shadow-l: #272729;
-  --photo-bg: #0b0b0c;
-  --fg: #f2f2f4;
+  --bg: #000;
+  --fg: #fff;
   --dim: #8e8e93;
-  --faint: #4a4a4d;
+  --faint: #48484a;
+  --line: #1c1c1e;
+  --empty: #0d0d0d;      /* 沒照片的格子、照片還沒載入時的底 */
   --red: #ff453a;
-  --yellow: #ffd60a;
-  --accent: #f5b544;
-  --accent-dim: #6b4d1c;
-
-  --raise-s: 4px 4px 8px var(--shadow-d), -4px -4px 8px var(--shadow-l);
-  --raise-m: 7px 7px 14px var(--shadow-d), -7px -7px 14px var(--shadow-l);
-  --raise-l: 14px 14px 28px var(--shadow-d), -14px -14px 28px var(--shadow-l);
-  --press-s: inset 3px 3px 6px var(--shadow-d), inset -3px -3px 6px var(--shadow-l);
-  --press-m: inset 6px 6px 12px var(--shadow-d), inset -6px -6px 12px var(--shadow-l);
-  --press-l: inset 10px 10px 20px var(--shadow-d), inset -10px -10px 20px var(--shadow-l);
+  /* 唯一的強調色：底片相機的日期印字 */
+  --accent: #ff8a2b;
+  --accent-dim: #5a3312;
+  --pad: 20px;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 [hidden] { display: none !important; }
@@ -28,143 +23,131 @@ html, body {
 }
 body { min-height: 100vh; min-height: 100dvh; }
 
+/* 畫面：淡入 */
 .screen {
   min-height: 100vh; min-height: 100dvh;
   display: flex; flex-direction: column;
-  padding: calc(16px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) calc(20px + env(safe-area-inset-left));
+  padding: calc(12px + env(safe-area-inset-top)) calc(var(--pad) + env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) calc(var(--pad) + env(safe-area-inset-left));
   opacity: 0; transition: opacity .18s ease;
 }
 .screen.in { opacity: 1; }
-.screen[hidden] { display: none; }
 .screen.center { align-items: center; justify-content: center; text-align: center; }
 
-h1.logo { font-size: 44px; font-weight: 700; margin: 24px 0 4px; letter-spacing: -.02em; }
-.lead { font-size: 18px; margin: 0 0 12px; }
+h1.logo { font-size: 64px; font-weight: 800; letter-spacing: -.05em; line-height: 1; margin: 40px 0 12px; }
+.lead { font-size: 18px; font-weight: 500; margin: 0 0 12px; }
 .hint { color: var(--dim); font-size: 14px; margin: 8px 0; }
 .bottom { margin-top: auto; }
 .msg { min-height: 1.5em; margin: 8px 0; }
-.warn { color: var(--yellow); font-size: 14px; }
+.warn { color: var(--accent); font-size: 14px; }
 
-/* ───────── 按鈕：只有「做決定」的地方才長這樣 ───────── */
+/* ───────── 按鈕：沒有框，做決定的地方才是實心白 ───────── */
 button {
-  font: inherit; color: var(--fg); background: var(--bg); border: none; border-radius: 999px;
-  padding: 15px 20px; box-shadow: var(--raise-m); transition: box-shadow .12s ease;
+  font: inherit; font-weight: 700; color: var(--fg); background: none; border: none;
+  border-radius: 999px; padding: 14px 18px; transition: opacity .12s ease;
 }
-button:active { box-shadow: var(--press-m); }
-button.primary { color: var(--accent); font-weight: 500; }
+button:active { opacity: .55; }
+button:disabled { opacity: .4; }
+button.primary { background: var(--fg); color: #000; }
 button.danger { color: var(--red); }
-button:disabled { opacity: .5; }
-.row { display: flex; gap: 16px; margin: 10px 0; }
-.row > button { flex: 1; }
+.row { display: flex; gap: 12px; margin: 10px 0; }
+.row > button { flex: 1; box-shadow: inset 0 0 0 1.5px #3a3a3c; }
+.row > button.primary { box-shadow: none; }
 
-/* 導覽：安靜的文字，沒有框 */
-.nav { display: flex; justify-content: center; gap: 40px; padding-top: 24px; }
-.nav button {
-  background: none; box-shadow: none; padding: 10px 4px; border-radius: 0;
-  color: var(--dim); font-size: 16px; font-weight: 500; letter-spacing: .02em;
-}
-.nav button:active { box-shadow: none; color: var(--fg); }
+/* 導覽：粗體文字 */
+.nav { display: flex; justify-content: center; gap: 36px; padding-top: 20px; }
+.nav button { padding: 10px 4px; font-size: 17px; }
 
 textarea {
-  width: 100%; font: inherit; font-size: 14px; background: var(--bg); color: var(--fg);
-  border: none; border-radius: 16px; padding: 14px; margin: 10px 0 16px; word-break: break-all;
-  box-shadow: var(--press-s); outline: none;
+  width: 100%; font: inherit; font-size: 14px; background: #111; color: var(--fg);
+  border: none; border-radius: 14px; padding: 14px; margin: 10px 0 16px; word-break: break-all; outline: none;
 }
+#setup-save { width: 100%; }
 
 /* ───────── 拍照畫面 ───────── */
-.clock { font-size: 96px; font-weight: 700; letter-spacing: -.03em; line-height: 1; -webkit-user-select: none; user-select: none; }
-.minute-status { margin-top: 14px; font-size: 20px; color: var(--dim); min-height: 30px; }
+.clock {
+  font-size: min(31vw, 132px); font-weight: 800; letter-spacing: -.06em; line-height: .9;
+  -webkit-user-select: none; user-select: none;
+}
+.minute-status { margin-top: 18px; font-size: 15px; font-weight: 600; color: var(--fg); min-height: 23px; }
 .minute-status::before {
-  content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 50%;
-  background: var(--bg); box-shadow: var(--press-s); margin-right: 10px; vertical-align: 2px;
+  content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--faint); margin-right: 9px; vertical-align: 1px;
 }
-.minute-status.free { color: var(--accent); }
-.minute-status.free::before { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
-.minute-status:empty::before { width: 120px; height: 12px; border-radius: 6px; margin: 0; animation: breathe 1.2s ease-in-out infinite; }
+.minute-status.free::before { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+.minute-status.owned { color: var(--dim); }
+.minute-status:empty::before { width: 120px; height: 10px; border-radius: 5px; background: #1c1c1e; margin: 0; box-shadow: none; animation: breathe 1.2s ease-in-out infinite; }
 @keyframes breathe { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
-.hour-progress { margin-top: 6px; font-size: 14px; color: var(--dim); min-height: 21px; }
+.hour-progress { margin-top: 4px; font-size: 13px; color: var(--dim); min-height: 20px; }
 
-/* 快門 F：凹進去的碗，中間坐一顆按鈕；對比拉高，暗處也看得到 */
+/* 快門：iOS 相機——白色外圈 + 白色實心圓，按下去內圓縮一下 */
 .shoot {
-  width: 184px; height: 184px; border-radius: 50%;
-  background: var(--bg); border: none; margin: 56px 0 8px; position: relative;
-  box-shadow:
-    inset 12px 12px 24px #050506, inset -12px -12px 24px #34343a,
-    0 0 0 1px rgba(255, 255, 255, .07);
-}
-.shoot:active {
-  box-shadow:
-    inset 12px 12px 24px #050506, inset -12px -12px 24px #34343a,
-    0 0 0 1px rgba(255, 255, 255, .07);
+  width: 88px; height: 88px; padding: 0; border-radius: 50%;
+  border: 4px solid var(--fg); background: none; margin: 13vh 0 8px; position: relative;
 }
 .shoot::after {
-  content: ''; position: absolute; inset: 40px; border-radius: 50%;
-  background: linear-gradient(145deg, #2e2e33, #17171a);
-  box-shadow:
-    8px 8px 16px #050506, -6px -6px 14px #3a3a41,
-    inset 0 0 0 1px rgba(255, 255, 255, .12);
-  transition: box-shadow .1s ease, transform .1s ease;
+  content: ''; position: absolute; inset: 5px; border-radius: 50%; background: var(--fg);
+  transition: transform .12s ease;
 }
-.shoot:active::after {
-  background: linear-gradient(145deg, #1c1c20, #232327);
-  box-shadow:
-    inset 5px 5px 10px #050506, inset -4px -4px 10px #34343a,
-    inset 0 0 0 1px rgba(255, 255, 255, .08);
-  transform: scale(.97);
-}
-.shoot:disabled { opacity: .4; }
-.cheat-banner { color: var(--yellow); font-size: 14px; margin: 8px 0 0; }
+.shoot:active { opacity: 1; }
+.shoot:active::after { transform: scale(.86); }
+.shoot:disabled { opacity: .35; }
+.cheat-banner { color: var(--accent); font-size: 14px; font-weight: 600; margin: 10px 0 0; }
 
-/* ───────── 今天 / 待上傳 / 看單張 ───────── */
-/* 照片都是 3:4：框固定 3:4，寬度依螢幕高度縮，cover 填滿，不留黑邊 */
-#today-img, #pending-img, #view-img {
-  display: block; align-self: center; width: min(100%, calc(62vh * 3 / 4)); aspect-ratio: 3 / 4;
-  height: auto; object-fit: cover; border-radius: 16px;
-  background: var(--photo-bg); box-shadow: var(--raise-m); -webkit-touch-callout: default;
+/* ───────── 照片：3:4 滿版，右下角橘色日期印字 ───────── */
+#scr-today, #scr-pending { padding-top: env(safe-area-inset-top); }
+.photo {
+  position: relative; align-self: flex-start; left: 50%; transform: translateX(-50%);
+  width: min(100vw, calc(64vh * 3 / 4)); aspect-ratio: 3 / 4; background: var(--empty);
 }
-.info { margin: 16px 0 18px; }
-.title { font-size: 28px; font-weight: 700; }
-.sub { color: var(--dim); }
-.ask p { font-size: 18px; margin: 8px 0; }
-/* 長按存相簿那句：只在上傳失敗、出現「重新上傳」時才顯示 */
+.photo img { display: block; width: 100%; height: 100%; object-fit: cover; -webkit-touch-callout: default; }
+.stamp {
+  position: absolute; right: 14px; bottom: 12px; pointer-events: none; white-space: pre;
+  font-size: 17px; font-weight: 500; letter-spacing: .06em; color: var(--accent);
+  text-shadow: 0 0 6px rgba(255, 120, 30, .75), 0 0 1px rgba(255, 170, 90, .9);
+}
+.info { margin: 18px 0 10px; }
+.title { font-size: 40px; font-weight: 800; letter-spacing: -.05em; line-height: 1; }
+.sub { color: var(--dim); font-size: 14px; margin-top: 6px; }
+.ask p { font-size: 17px; font-weight: 500; margin: 8px 0; }
+/* 長按存相簿那句：只在上傳失敗、出現「Retry」時才顯示 */
 .only-failed { display: none; }
 #pending-actions:not([hidden]) ~ .only-failed { display: block; }
-/* 作弊：角落一行極淡的小字 */
-.cheat { align-self: flex-end; background: none; box-shadow: none; border: none; color: var(--faint); font-size: 12px; padding: 12px 0 0; }
-.cheat:active { box-shadow: none; }
+.cheat { align-self: flex-end; font-size: 12px; font-weight: 400; color: var(--faint); padding: 10px 0 0; }
 
-/* ───────── 總覽 / 小時書 共用列 ───────── */
-.bar { display: flex; align-items: center; justify-content: space-between; margin: 0 0 14px; }
-.bar .back { background: none; box-shadow: none; width: 42px; height: 42px; padding: 0 0 4px; font-size: 34px; line-height: 1; color: var(--fg); text-align: left; }
-.bar .back:active { box-shadow: none; color: var(--dim); }
-.bar-spacer { width: 42px; }
-#wall-progress, #book-title { font-weight: 500; }
+/* ───────── 標題列：返回鍵 + 大粗字 ───────── */
+.bar { display: flex; align-items: center; gap: 6px; margin: 0 0 14px; }
+.bar .back { padding: 0 10px 4px 0; font-size: 36px; font-weight: 300; line-height: 1; }
+.bar-spacer { display: none; }
+#wall-progress, #book-title, #view-title { font-size: 30px; font-weight: 800; letter-spacing: -.05em; line-height: 1; }
+#view-sub { margin-top: 14px; }
 
-/* ───────── 總覽 ───────── */
-.wall-wrap { position: relative; margin: 0 auto; border-radius: 6px; box-shadow: var(--raise-m); }
-#wall { display: block; border-radius: 6px; background: var(--photo-bg); }
+/* ───────── 總覽：拼貼撐滿整個寬度 ───────── */
+#scr-wall, #scr-book { padding-left: 0; padding-right: 0; }
+#scr-wall .bar, #scr-book .bar { padding: 0 calc(var(--pad) + env(safe-area-inset-left)); }
+.wall-wrap { position: relative; margin: 0 auto; }
+#wall { display: block; background: var(--empty); }
 #wall-overlay { position: absolute; left: 0; top: 0; pointer-events: none; }
 .hour-labels { display: flex; margin: 0 auto 6px; font-size: 11px; color: var(--dim); }
-.hour-labels span { flex: 1; text-align: left; }
+.hour-labels span { flex: 1; text-align: left; padding-left: 2px; }
 
-/* ───────── 小時書 ───────── */
-.dots { display: flex; gap: 3px; justify-content: center; margin: 0 0 14px; }
-.dots button { flex: 0 0 auto; width: 9px; height: 9px; padding: 0; border-radius: 50%; background: var(--bg); box-shadow: var(--press-s); transition: transform .15s ease, background .15s ease; }
-.dots button.has { background: var(--accent-dim); box-shadow: none; }
-.dots button.on { background: var(--fg); box-shadow: none; transform: scale(1.35); }
+/* ───────── 小時書：3:4 格子無縫排列 ───────── */
+.dots { display: flex; gap: 4px; justify-content: center; margin: 0 0 14px; }
+.dots button { flex: 0 0 auto; width: 7px; height: 7px; padding: 0; border-radius: 50%; background: #2c2c2e; transition: transform .15s ease, background .15s ease; }
+.dots button:active { opacity: 1; }
+.dots button.has { background: var(--accent-dim); }
+.dots button.on { background: var(--fg); transform: scale(1.35); }
 
-.pages { display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; margin: 0 -20px; flex: 1; }
+.pages { display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; flex: 1; }
 .pages::-webkit-scrollbar { display: none; }
-.page { flex: 0 0 100%; scroll-snap-align: start; padding: 4px 20px; }
-.grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
-.cell { aspect-ratio: 1; background: var(--bg); border-radius: 8px; position: relative; overflow: hidden; box-shadow: var(--press-s); }
-.cell.lit { background: var(--photo-bg); box-shadow: var(--raise-s); }
+.page { flex: 0 0 100%; scroll-snap-align: start; }
+.grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1px; }
+.cell { aspect-ratio: 3 / 4; background: var(--empty); position: relative; overflow: hidden; }
 .cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.cell span { position: absolute; left: 5px; bottom: 2px; font-size: 10px; color: var(--faint); }
-.cell.lit span { color: #fff; text-shadow: 0 0 3px #000, 0 0 3px #000; }
+.cell span { position: absolute; left: 5px; bottom: 3px; font-size: 10px; color: var(--faint); }
+.cell.lit span { color: var(--accent); font-weight: 500; text-shadow: 0 0 4px rgba(255, 120, 30, .8); }
 
 #toast {
   position: fixed; left: 50%; bottom: calc(40px + env(safe-area-inset-bottom)); transform: translateX(-50%);
-  background: var(--bg); color: var(--fg); padding: 12px 20px; border-radius: 24px; font-weight: 500;
-  max-width: 90vw; text-align: center; z-index: 9; box-shadow: var(--raise-m);
+  background: var(--fg); color: #000; padding: 12px 20px; border-radius: 999px; font-weight: 600;
+  max-width: 90vw; text-align: center; z-index: 9;
 }

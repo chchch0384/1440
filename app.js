@@ -9,8 +9,14 @@ var THUMB_BATCH = 60, MEDIUM_KEEP = 50, REFRESH_MS = 10 * 60 * 1000;
 // ───────────── 小工具 ─────────────
 
 var $ = function (id) { return document.getElementById(id); };
-var ACCENT = '#f5b544', ACCENT_DIM = '#6b4d1c';   // 唯一的強調色，跟 style.css 的 --accent 一樣
+var ACCENT = '#ff8a2b', ACCENT_DIM = '#5a3312';   // 唯一的強調色，跟 style.css 的 --accent 一樣
 function two(n) { return (n < 10 ? '0' : '') + n; }
+// 底片相機的日期印字：'26 9 29  15:21
+function stampText(date, minute) {
+  var p = String(date || '').split('-');
+  if (p.length !== 3) return minute || '';
+  return "'" + p[0].slice(2) + ' ' + (+p[1]) + ' ' + (+p[2]) + '  ' + minute;
+}
 function fmtDate(d) { return d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate()); }
 function fmtMinute(d) { return two(d.getHours()) + ':' + two(d.getMinutes()); }
 function fmtISO(d) {
@@ -311,9 +317,11 @@ function resizeToBlob(img, max, q, square) {
   var w = img.naturalWidth, h = img.naturalHeight;
   var c = document.createElement('canvas'), ctx = c.getContext('2d');
   if (square) {
-    var s = Math.min(w, h);
-    c.width = c.height = max;
-    ctx.drawImage(img, (w - s) / 2, (h - s) / 2, s, s, 0, 0, max, max);
+    // 縮圖：3:4 直式，高 = max，從中間裁
+    var tw = Math.round(max * 3 / 4), th = max, sw = w, sh = w * 4 / 3;
+    if (sh > h) { sh = h; sw = h * 3 / 4; }
+    c.width = tw; c.height = th;
+    ctx.drawImage(img, (w - sw) / 2, (h - sh) / 2, sw, sh, 0, 0, tw, th);
   } else {
     var scale = Math.min(1, max / Math.max(w, h));
     c.width = Math.max(1, Math.round(w * scale));
@@ -462,6 +470,7 @@ function processPhoto(file, meta) {
   $('pending-ask').hidden = true; $('pending-actions').hidden = true;
   setPendingImg(file);
   setPendingUI('Processing…', meta.minute);
+  $('pending-stamp').textContent = stampText(meta.date, meta.minute);
   var img;
   return loadImage(file).then(function (im) {
     img = im;
@@ -490,6 +499,7 @@ function showPending(p) {
   show('scr-pending');
   $('pending-ask').hidden = true; $('pending-actions').hidden = true;
   setPendingImg(p.medium || p.photo);
+  $('pending-stamp').textContent = stampText(p.date, p.minute);
   if (p.status === 'confirmed') return upload(p);
   return decide(p);
 }
@@ -596,8 +606,11 @@ function showToday(t) {
   var tags = [];
   if (!last.lit) tags.push('extra');
   if (last.cheat) tags.push('cheat');
-  $('today-title').textContent = 'Today ' + last.minute + (tags.length ? ' · ' + tags.join(' · ') : '');
-  $('today-sub').textContent = t.length > 1 ? t.length + ' moments today' : '';
+  // 標題只放時間，標記和張數放下面那行，大字才不會折行
+  $('today-title').textContent = 'Today ' + last.minute;
+  if (t.length > 1) tags.push(t.length + ' moments today');
+  $('today-sub').textContent = tags.join(' · ');
+  $('today-stamp').textContent = stampText(last.date, last.minute);
   showPhotoInto($('today-img'), last);
 }
 $('today-wall').onclick = function () { showWall(); };
@@ -632,7 +645,7 @@ function renderWall() {
   canvas.height = Math.round(H * dpr);
   var ctx = canvas.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.fillStyle = '#111';
+  ctx.fillStyle = '#0d0d0d';
   ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = ACCENT_DIM;
   Object.keys(byMinute).forEach(function (m) { ctx.fillRect(cellX(m), cellY(m), CW - 1, CH - 1); });
@@ -694,7 +707,7 @@ function drawWallThumbs() {
       Object.keys(drawn).forEach(function (id) {
         var mn = drawn[id];
         if (!byMinute[mn] || byMinute[mn].thumb_id !== id) {
-          ctx.fillStyle = byMinute[mn] ? ACCENT_DIM : '#111';
+          ctx.fillStyle = byMinute[mn] ? ACCENT_DIM : '#0d0d0d';
           ctx.fillRect(cellX(mn), cellY(mn), CW - 1, CH - 1);
           delete drawn[id];
         }
@@ -845,6 +858,7 @@ function showView(r) {
   if (r.cheat) tags.push('cheat');
   if (extra) tags.push(extra + ' more this minute');
   $('view-sub').textContent = tags.join(' · ');
+  $('view-stamp').textContent = stampText(r.date, r.minute);
   showPhotoInto($('view-img'), r);
 }
 
