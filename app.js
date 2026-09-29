@@ -19,7 +19,7 @@ function fmtISO(d) {
   return fmtDate(d) + 'T' + fmtMinute(d) + ':' + two(d.getSeconds()) + sign + two(Math.floor(off / 60)) + ':' + two(off % 60);
 }
 function truthy(v) { return v === true || v === 1 || v === '1' || v === 'TRUE' || v === 'true'; }
-function errMsg(e) { return String((e && (e.message || e.name)) || e || '未知錯誤（可能是手機儲存空間）'); }
+function errMsg(e) { return String((e && (e.message || e.name)) || e || 'Unknown error (maybe out of storage)'); }
 var standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
 
 var toastTimer = null;
@@ -29,7 +29,7 @@ function toast(msg, ms) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(function () { t.hidden = true; }, ms || 2500);
 }
-window.addEventListener('error', function (e) { toast('錯誤：' + (e.message || '未知'), 5000); });
+window.addEventListener('error', function (e) { toast('Error: ' + (e.message || 'unknown'), 5000); });
 
 // ───────────── 設定（專屬連結） ─────────────
 
@@ -64,13 +64,13 @@ function setTransport(t) { transport = t; try { localStorage.setItem('transport'
 
 function ServerError(msg) { var e = new Error(msg); e.server = true; return e; }
 var SERVER_MSG = {
-  bad_key: '密鑰不對，重新複製試算表「設定」分頁 B7 整串',
-  not_setup: '收件員還沒設定，先在 Apps Script 執行 setup',
-  bad_action: '收件員是舊版，請把新的 Code.gs 貼上並部署新版本',
-  upload_needs_post: '收件員設定有誤'
+  bad_key: 'Wrong key. Copy the whole link from cell B7 again.',
+  not_setup: 'Server not set up. Run setup in Apps Script.',
+  bad_action: 'Server is outdated. Paste the new Code.gs and deploy a new version.',
+  upload_needs_post: 'Server misconfigured.'
 };
 function checkReply(j) {
-  if (!j || !j.ok) throw ServerError((j && (j.message || SERVER_MSG[j.error] || j.error)) || '回應格式錯誤');
+  if (!j || !j.ok) throw ServerError((j && (j.message || SERVER_MSG[j.error] || j.error)) || 'Bad response');
   return j;
 }
 
@@ -82,7 +82,7 @@ function call(action, data) {
     if (e.server) throw e;
     // fetch 這條路壞了，換備援再試一次；備援通了就記住
     return callAlt(body).then(function (j) { setTransport('alt'); return j; }, function (e2) {
-      throw new Error('兩種連線都失敗。fetch：' + errMsg(e) + '；備援：' + errMsg(e2));
+      throw new Error('Both connections failed. fetch: ' + errMsg(e) + '; fallback: ' + errMsg(e2));
     });
   });
 }
@@ -96,7 +96,7 @@ function callFetch(body) {
       var j;
       try { j = JSON.parse(t); } catch (e) {
         var peek = t.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
-        throw new Error('回的不是資料（HTTP ' + r.status + '）' + (peek ? '：' + peek : ''));
+        throw new Error('Not data (HTTP ' + r.status + ')' + (peek ? ': ' + peek : ''));
       }
       return checkReply(j);
     });
@@ -112,10 +112,10 @@ function jsonp(body, timeoutMs) {
   return new Promise(function (resolve, reject) {
     var name = '__1440cb' + Date.now().toString(36) + (jsonpSeq++);
     var s = document.createElement('script');
-    var timer = setTimeout(function () { finish(); reject(new Error('備援逾時')); }, timeoutMs || 25000);
+    var timer = setTimeout(function () { finish(); reject(new Error('Fallback timed out')); }, timeoutMs || 25000);
     function finish() { clearTimeout(timer); try { delete window[name]; } catch (e) { window[name] = undefined; } if (s.parentNode) s.parentNode.removeChild(s); }
     window[name] = function (j) { finish(); try { resolve(checkReply(j)); } catch (e) { reject(e); } };
-    s.onerror = function () { finish(); reject(new Error('備援載入失敗')); };
+    s.onerror = function () { finish(); reject(new Error('Fallback failed to load')); };
     s.src = cfg.api + (cfg.api.indexOf('?') < 0 ? '?' : '&') + 'cb=' + name + '&p=' + encodeURIComponent(JSON.stringify(body)) + '&_=' + Date.now();
     document.head.appendChild(s);
   });
@@ -123,7 +123,7 @@ function jsonp(body, timeoutMs) {
 
 // 表單 POST 送進隱藏 iframe（看不到回應），再用 uid 反覆查有沒有存進去
 function uploadAlt(body) {
-  if (!body.uid) return Promise.reject(new Error('缺少 uid'));
+  if (!body.uid) return Promise.reject(new Error('Missing uid'));
   return new Promise(function (resolve) {
     var name = 'up' + Date.now();
     var ifr = document.createElement('iframe');
@@ -146,7 +146,7 @@ function uploadAlt(body) {
 function pollUid(uid, tries) {
   return jsonp({ key: cfg.k, action: 'find', uid: uid }).then(function (j) {
     if (j.row) return { ok: true, lit: truthy(j.row[5]), cheat: truthy(j.row[6]), row: j.row };
-    if (tries <= 1) throw new Error('送出了，但收件員還沒收到，稍後會再試');
+    if (tries <= 1) throw new Error('Sent, but not received yet. Will retry.');
     return new Promise(function (r) { setTimeout(r, 3000); }).then(function () { return pollUid(uid, tries - 1); });
   });
 }
@@ -173,8 +173,8 @@ function idb(store, mode, fn) {
       var tx = d.transaction(store, mode);
       var req = fn(tx.objectStore(store));
       tx.oncomplete = function () { res(req ? req.result : undefined); };
-      tx.onerror = function () { rej(tx.error || new Error('手機暫存寫入失敗')); };
-      tx.onabort = function () { rej(tx.error || new Error('手機暫存寫入被中斷')); };
+      tx.onerror = function () { rej(tx.error || new Error('Could not save to phone storage')); };
+      tx.onabort = function () { rej(tx.error || new Error('Phone storage write was interrupted')); };
     });
   });
 }
@@ -303,7 +303,7 @@ function loadImage(blob) {
   return new Promise(function (res, rej) {
     var u = URL.createObjectURL(blob), im = new Image();
     im.onload = function () { URL.revokeObjectURL(u); res(im); };
-    im.onerror = function () { URL.revokeObjectURL(u); rej(new Error('無法讀取照片')); };
+    im.onerror = function () { URL.revokeObjectURL(u); rej(new Error('Cannot read photo')); };
     im.src = u;
   });
 }
@@ -321,7 +321,7 @@ function resizeToBlob(img, max, q, square) {
     ctx.drawImage(img, 0, 0, c.width, c.height);
   }
   return new Promise(function (res, rej) {
-    c.toBlob(function (b) { if (b) res(b); else rej(new Error('照片轉檔失敗')); }, 'image/jpeg', q);
+    c.toBlob(function (b) { if (b) res(b); else rej(new Error('Photo conversion failed')); }, 'image/jpeg', q);
   });
 }
 
@@ -353,7 +353,7 @@ function home() {
     var t = todayRows();
     if (t.length) return showToday(t);
     return showShoot(false);
-  }).catch(function (e) { toast('打不開暫存：' + errMsg(e), 4000); showShoot(false); });
+  }).catch(function (e) { toast('Cannot open saved photo: ' + errMsg(e), 4000); showShoot(false); });
 }
 
 // ───────────── 設定畫面 ─────────────
@@ -367,19 +367,19 @@ function showSetup() {
 $('setup-save').onclick = function () {
   var c = parseLink($('setup-link').value);
   var msg = $('setup-msg');
-  if (!c) { msg.textContent = '這串少了東西。專屬連結要包含 #k=… 和 &api=https://script.google.com/…'; return; }
-  msg.textContent = '測試連線中…';
+  if (!c) { msg.textContent = 'That link is incomplete. It needs #k=… and &api=https://script.google.com/…'; return; }
+  msg.textContent = 'Connecting…';
   $('setup-save').disabled = true;
   var old = cfg; cfg = c;
   setTransport('fetch');
   call('ping').then(function () {
     saveCfg(c);
-    msg.textContent = '連上了 ✅';
+    msg.textContent = 'Connected ✅';
     $('setup-link').value = '';
     return boot();
   }).catch(function (e) {
     cfg = old;
-    msg.textContent = '連不上：' + errMsg(e);
+    msg.textContent = 'Cannot connect: ' + errMsg(e);
   }).then(function () { $('setup-save').disabled = false; });
 };
 $('setup-cancel').onclick = function () { home(); };
@@ -390,7 +390,7 @@ $('setup-cancel').onclick = function () { home(); };
   function start() {
     timer = setTimeout(function () {
       timer = 0;
-      if (confirm('要重新設定專屬連結嗎？')) showSetup();
+      if (confirm('Set up the private link again?')) showSetup();
     }, 1000);
   }
   function stop() { if (timer) { clearTimeout(timer); timer = 0; } }
@@ -420,9 +420,9 @@ function tick() {
   if (current !== 'scr-shoot') return;
   var owned = !!byMinute[m];
   var el = $('minute-status');
-  el.textContent = m + (owned ? ' 已擁有' : ' 空的');
+  el.textContent = m + (owned ? ' taken' : ' free');
   el.className = 'minute-status ' + (owned ? 'owned' : 'free');
-  $('hour-progress').textContent = '這一小時 ' + hourCount(d.getHours()) + ' / 60';
+  $('hour-progress').textContent = 'This hour ' + hourCount(d.getHours()) + '/60';
 }
 setInterval(tick, 1000);
 
@@ -461,7 +461,7 @@ function processPhoto(file, meta) {
   show('scr-pending');
   $('pending-ask').hidden = true; $('pending-actions').hidden = true;
   setPendingImg(file);
-  setPendingUI('處理照片中…', meta.minute);
+  setPendingUI('Processing…', meta.minute);
   var img;
   return loadImage(file).then(function (im) {
     img = im;
@@ -480,7 +480,7 @@ function processPhoto(file, meta) {
       return decide(p);
     });
   }).catch(function (e) {
-    setPendingUI('照片處理失敗', errMsg(e));
+    setPendingUI('Processing failed', errMsg(e));
     $('pending-actions').hidden = false;
   });
 }
@@ -497,8 +497,8 @@ function showPending(p) {
 // 那格空的 → 直接上傳；已擁有 → 問一句
 function decide(p) {
   if (p.status === 'new' && byMinute[p.minute]) {
-    setPendingUI(p.minute + ' 已擁有', '這一分鐘已經點亮過了');
-    $('pending-ask-text').textContent = p.minute + ' 已經有了，還是要記錄嗎？';
+    setPendingUI(p.minute + ' taken', 'This minute is already lit');
+    $('pending-ask-text').textContent = p.minute + ' is taken. Keep this one anyway?';
     $('pending-ask').hidden = false;
     return;
   }
@@ -518,7 +518,7 @@ $('pending-retry').onclick = function () {
   getPending().then(function (p) { if (p) upload(p); else home(); });
 };
 $('pending-discard').onclick = function () {
-  if (!confirm('確定放棄這張？照片會從手機刪掉。')) return;
+  if (!confirm('Discard this photo? It will be deleted from your phone.')) return;
   idbDel('pending', 'current').then(function () { home(); });
 };
 
@@ -531,11 +531,11 @@ function upload(p) {
   if (p.status !== 'confirmed') { p.status = 'confirmed'; persist = idbPut('pending', 'current', p); }
   if (navigator.onLine === false) {
     uploading = false;
-    setPendingUI('待上傳', '現在沒有網路。有網路時再打開 App 會自動補傳。');
+    setPendingUI('Waiting to upload', 'No connection. It will upload next time you open the app online.');
     $('pending-actions').hidden = false;
     return persist;
   }
-  setPendingUI('上傳中…', p.minute + (p.cheat ? ' · 作弊' : ''));
+  setPendingUI('Uploading…', p.minute + (p.cheat ? ' · cheat' : ''));
   return persist.then(function () {
     return Promise.all([blobToB64(p.photo), blobToB64(p.thumb)]);
   }).then(function (b) {
@@ -548,12 +548,12 @@ function upload(p) {
     if (r[8]) jobs.push(putMedium(r[8], p.medium));
     return Promise.all(jobs).then(function () {
       uploading = false;
-      toast(truthy(r[5]) ? '收進 ' + p.minute + ' ✨' : p.minute + ' 已擁有，存成額外照片');
+      toast(truthy(r[5]) ? p.minute + ' lit ✨' : p.minute + ' taken, saved as extra');
       return home();
     });
   }).catch(function (e) {
     uploading = false;
-    setPendingUI('待上傳', '上傳沒成功：' + errMsg(e) + '。照片還在手機裡。');
+    setPendingUI('Waiting to upload', 'Upload failed: ' + errMsg(e) + '. The photo is still on your phone.');
     $('pending-actions').hidden = false;
   });
 }
@@ -584,7 +584,7 @@ function showPhotoInto(img, r) {
       return resizeToBlob(im, MEDIUM, MEDIUM_Q, false);
     }).then(function (m) {
       return putMedium(r.file_name, m).then(function () { if (my === photoReq) img.src = URL.createObjectURL(m); });
-    }).catch(function (e) { toast('抓原圖失敗：' + errMsg(e), 4000); });
+    }).catch(function (e) { toast('Could not load photo: ' + errMsg(e), 4000); });
   });
 }
 
@@ -594,48 +594,53 @@ function showToday(t) {
   var last = t[t.length - 1];
   show('scr-today');
   var tags = [];
-  if (!last.lit) tags.push('額外照片');
-  if (last.cheat) tags.push('作弊');
-  $('today-title').textContent = '今天 ' + last.minute + (tags.length ? ' · ' + tags.join(' · ') : '');
-  $('today-sub').textContent = t.length > 1 ? '今天記了 ' + t.length + ' 個瞬間' : '';
+  if (!last.lit) tags.push('extra');
+  if (last.cheat) tags.push('cheat');
+  $('today-title').textContent = 'Today ' + last.minute + (tags.length ? ' · ' + tags.join(' · ') : '');
+  $('today-sub').textContent = t.length > 1 ? t.length + ' moments today' : '';
   showPhotoInto($('today-img'), last);
 }
 $('today-wall').onclick = function () { showWall(); };
 $('today-book').onclick = function () { showBook(new Date().getHours()); };
 $('today-cheat').onclick = function () {
-  if (confirm('今天已經點亮了，確定要作弊嗎？')) showShoot(true);
+  if (confirm('Already lit today. Cheat?')) showShoot(true);
 };
 
 // ───────────── 總覽：24 欄 × 60 列拼貼 ─────────────
+// 寬度撐滿畫面、高度量實際剩下的空間；格子可以比高寬一點，縮圖從中間裁
 
-var CELL = 12;
+var CW = 12, CH = 12;
 function showWall() {
   go('scr-wall');
   renderWall();
 }
+function cellX(mn) { return +mn.slice(0, 2) * CW; }
+function cellY(mn) { return +mn.slice(3) * CH; }
 function renderWall() {
-  var canvas = $('wall');
-  var maxW = window.innerWidth - 32, maxH = window.innerHeight - 150;
-  CELL = Math.max(6, Math.min(Math.floor(maxW / 24), Math.floor(maxH / 60)));
+  var canvas = $('wall'), scr = $('scr-wall'), cs = getComputedStyle(scr);
+  var maxW = scr.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  var top = $('wall-wrap').getBoundingClientRect().top;
+  var maxH = window.innerHeight - top - parseFloat(cs.paddingBottom);
+  CW = Math.max(6, Math.floor(maxW / 24 * 2) / 2);
+  CH = Math.max(6, Math.min(CW, Math.floor(maxH / 60 * 2) / 2));
+  var W = CW * 24, H = CH * 60;
   var dpr = window.devicePixelRatio || 1;
-  canvas.style.width = CELL * 24 + 'px';
-  canvas.style.height = CELL * 60 + 'px';
-  $('wall-wrap').style.width = CELL * 24 + 'px';
-  canvas.width = CELL * 24 * dpr;
-  canvas.height = CELL * 60 * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  $('wall-wrap').style.width = W + 'px';
+  canvas.width = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
   var ctx = canvas.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.fillStyle = '#111';
-  ctx.fillRect(0, 0, CELL * 24, CELL * 60);
+  ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = ACCENT_DIM;
-  Object.keys(byMinute).forEach(function (m) {
-    ctx.fillRect(+m.slice(0, 2) * CELL, +m.slice(3) * CELL, CELL - 1, CELL - 1);
-  });
+  Object.keys(byMinute).forEach(function (m) { ctx.fillRect(cellX(m), cellY(m), CW - 1, CH - 1); });
   var labels = $('wall-labels');
-  labels.style.width = CELL * 24 + 'px';
+  labels.style.width = W + 'px';
   labels.innerHTML = '';
   for (var h = 0; h < 24; h++) { var s = document.createElement('span'); s.textContent = h % 6 === 0 ? h : ''; labels.appendChild(s); }
-  $('wall-progress').textContent = '已收集 ' + litCount() + ' / 1440';
+  $('wall-progress').textContent = litCount() + '/1440';
   lastWallMinute = '';
   drawWallMarkers();
   drawWallThumbs();
@@ -644,11 +649,11 @@ function renderWall() {
 // 標記層：畫在另一張覆蓋的畫布上，不會被拼貼快取蓋掉
 function drawWallMarkers() {
   var ov = $('wall-overlay'), dpr = window.devicePixelRatio || 1;
-  var w = CELL * 24, h = CELL * 60;
+  var w = CW * 24, h = CH * 60;
   ov.style.width = w + 'px';
   ov.style.height = h + 'px';
-  ov.width = w * dpr;
-  ov.height = h * dpr;
+  ov.width = Math.round(w * dpr);
+  ov.height = Math.round(h * dpr);
   var ctx = ov.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
@@ -656,14 +661,21 @@ function drawWallMarkers() {
   ctx.strokeStyle = '#fff';
   ctx.lineWidth = 1;
   todayRows().forEach(function (r) {
-    var mn = r.minute;
-    ctx.strokeRect(+mn.slice(0, 2) * CELL + .5, +mn.slice(3) * CELL + .5, CELL - 2, CELL - 2);
+    ctx.strokeRect(cellX(r.minute) + .5, cellY(r.minute) + .5, CW - 2, CH - 2);
   });
   // 現在這一分鐘：琥珀色粗框
   var now = fmtMinute(new Date());
   ctx.strokeStyle = ACCENT;
   ctx.lineWidth = 2;
-  ctx.strokeRect(+now.slice(0, 2) * CELL - .5, +now.slice(3) * CELL - .5, CELL + 1, CELL + 1);
+  ctx.strokeRect(cellX(now) - .5, cellY(now) - .5, CW + 1, CH + 1);
+}
+
+// 縮圖是正方形，格子可能比較寬：從中間裁出同比例的一塊再畫
+function drawThumb(ctx, im, x, y) {
+  var w = CW - 1, h = CH - 1, iw = im.naturalWidth, ih = im.naturalHeight;
+  var sw = iw, sh = iw * h / w;
+  if (sh > ih) { sh = ih; sw = ih * w / h; }
+  ctx.drawImage(im, (iw - sw) / 2, (ih - sh) / 2, sw, sh, x, y, w, h);
 }
 
 // 拼貼存成一張圖片快取，之後只補畫新格子
@@ -672,18 +684,18 @@ function drawWallThumbs() {
   if (wallDrawing) return;
   wallDrawing = true;
   var canvas = $('wall'), ctx = canvas.getContext('2d');
-  var drawn = {};
+  var drawn = {}, sizeKey = CW + 'x' + CH;
   idbGet('misc', 'mosaic').then(function (m) {
-    if (!(m && m.cell === CELL && m.blob)) return;
+    if (!(m && m.cell === sizeKey && m.blob)) return;
     return loadImage(m.blob).then(function (im) {
-      ctx.drawImage(im, 0, 0, CELL * 24, CELL * 60);
+      ctx.drawImage(im, 0, 0, CW * 24, CH * 60);
       drawn = m.drawn || {};
       // 格子換了照片（例如重建後）就先蓋回色塊
       Object.keys(drawn).forEach(function (id) {
         var mn = drawn[id];
         if (!byMinute[mn] || byMinute[mn].thumb_id !== id) {
           ctx.fillStyle = byMinute[mn] ? ACCENT_DIM : '#111';
-          ctx.fillRect(+mn.slice(0, 2) * CELL, +mn.slice(3) * CELL, CELL - 1, CELL - 1);
+          ctx.fillRect(cellX(mn), cellY(mn), CW - 1, CH - 1);
           delete drawn[id];
         }
       });
@@ -694,8 +706,8 @@ function drawWallThumbs() {
   }).then(function (changed) {
     wallDrawing = false;
     if (!changed) return;
-    canvas.toBlob(function (b) { if (b) idbPut('misc', 'mosaic', { cell: CELL, blob: b, drawn: drawn }); }, 'image/jpeg', 0.9);
-  }).catch(function (e) { wallDrawing = false; toast('畫總覽失敗：' + errMsg(e), 4000); });
+    canvas.toBlob(function (b) { if (b) idbPut('misc', 'mosaic', { cell: sizeKey, blob: b, drawn: drawn }); }, 'image/jpeg', 0.9);
+  }).catch(function (e) { wallDrawing = false; toast('Wall failed: ' + errMsg(e), 4000); });
 }
 function drawCells(ctx, minutes, drawn) {
   var changed = false, i = 0;
@@ -711,7 +723,7 @@ function drawCells(ctx, minutes, drawn) {
           return idbGet('thumbs', r.thumb_id).then(function (b) {
             if (!b) return;
             return loadImage(b).then(function (im) {
-              ctx.drawImage(im, +mn.slice(0, 2) * CELL, +mn.slice(3) * CELL, CELL - 1, CELL - 1);
+              drawThumb(ctx, im, cellX(mn), cellY(mn));
               drawn[r.thumb_id] = mn;
               changed = true;
             });
@@ -724,7 +736,7 @@ function drawCells(ctx, minutes, drawn) {
 }
 $('wall').onclick = function (e) {
   var rect = this.getBoundingClientRect();
-  var h = Math.floor((e.clientX - rect.left) / CELL);
+  var h = Math.floor((e.clientX - rect.left) / CW);
   if (h >= 0 && h < 24) showBook(h);
 };
 
@@ -774,7 +786,7 @@ function buildBook() {
   bookDirty = false;
 }
 function updateBookTitle(h) {
-  $('book-title').textContent = h + ' 點 · 已收 ' + hourCount(h) + ' / 60';
+  $('book-title').textContent = two(h) + ':00 · ' + hourCount(h) + '/60';
   Array.prototype.forEach.call($('book-dots').children, function (b, i) {
     b.classList.toggle('on', i === h);
     b.classList.toggle('has', hourCount(i) > 0);
@@ -786,7 +798,7 @@ function buildBookDots() {
   for (var h = 0; h < 24; h++) {
     var b = document.createElement('button');
     b.dataset.hour = h;
-    b.setAttribute('aria-label', h + ' 點');
+    b.setAttribute('aria-label', two(h) + ':00');
     d.appendChild(b);
   }
 }
@@ -830,8 +842,8 @@ function showView(r) {
   $('view-title').textContent = r.minute;
   var extra = rows.filter(function (x) { return x.minute === r.minute && x !== r; }).length;
   var tags = [r.date];
-  if (r.cheat) tags.push('作弊');
-  if (extra) tags.push('同一分鐘還有 ' + extra + ' 張');
+  if (r.cheat) tags.push('cheat');
+  if (extra) tags.push(extra + ' more this minute');
   $('view-sub').textContent = tags.join(' · ');
   showPhotoInto($('view-img'), r);
 }
@@ -855,7 +867,7 @@ function boot() {
       if (current === 'scr-wall') renderWall();
       tick();
     });
-  }).catch(function (e) { toast('同步失敗：' + errMsg(e), 4000); });
+  }).catch(function (e) { toast('Sync failed: ' + errMsg(e), 4000); });
 }
 
 document.addEventListener('visibilitychange', function () {

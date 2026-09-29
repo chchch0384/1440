@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-Hant">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="style.css?v=8">
 <title>1440</title>
 </head>
 <body>
@@ -22,13 +22,13 @@
 <!-- 設定：貼上專屬連結（只做一次） -->
 <section id="scr-setup" class="screen" hidden>
   <h1 class="logo">1440</h1>
-  <p class="lead">貼上你的專屬連結。</p>
-  <p id="setup-warn" class="warn" hidden>你現在是用 Safari 打開的。建議先加入主畫面，再從主畫面的圖示打開來貼。</p>
+  <p class="lead">Paste your private link.</p>
+  <p id="setup-warn" class="warn" hidden>You're in Safari. Add to Home Screen first, then paste it in the home screen app.</p>
   <textarea id="setup-link" rows="4" placeholder="https://chchch0384.github.io/1440/#k=…&amp;api=https://script.google.com/…" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
-  <button id="setup-save" class="primary">儲存</button>
+  <button id="setup-save" class="primary">Save</button>
   <p id="setup-msg" class="msg"></p>
-  <p class="hint">連結在試算表「1440-紀錄」的「設定」分頁 B7。</p>
-  <nav class="nav bottom"><button id="setup-cancel" hidden>取消</button></nav>
+  <p class="hint">It's in cell B7 of the settings tab in your 1440 Google Sheet.</p>
+  <nav class="nav bottom"><button id="setup-cancel" hidden>Cancel</button></nav>
 </section>
 
 <!-- 拍照畫面 -->
@@ -38,12 +38,12 @@
     <div id="minute-status" class="minute-status"></div>
     <div id="hour-progress" class="hour-progress"></div>
   </div>
-  <button id="btn-shoot" class="shoot" aria-label="拍照"></button>
+  <button id="btn-shoot" class="shoot" aria-label="Take photo"></button>
   <input id="file" type="file" accept="image/*" capture="environment" hidden>
-  <p id="cheat-banner" class="cheat-banner" hidden>作弊模式</p>
+  <p id="cheat-banner" class="cheat-banner" hidden>Cheat mode</p>
   <nav class="nav bottom">
-    <button id="shoot-cancel-cheat" hidden>取消作弊</button>
-    <button id="shoot-wall">總覽</button>
+    <button id="shoot-cancel-cheat" hidden>Cancel cheat</button>
+    <button id="shoot-wall">Wall</button>
   </nav>
 </section>
 
@@ -51,21 +51,21 @@
 <section id="scr-pending" class="screen" hidden>
   <img id="pending-img" alt="">
   <div class="info">
-    <div id="pending-title" class="title">處理中…</div>
+    <div id="pending-title" class="title">Processing…</div>
     <div id="pending-sub" class="sub"></div>
   </div>
   <div id="pending-ask" class="ask" hidden>
     <p id="pending-ask-text"></p>
     <div class="row">
-      <button id="pending-retake">重拍</button>
-      <button id="pending-keep" class="primary">還是要</button>
+      <button id="pending-retake">Retake</button>
+      <button id="pending-keep" class="primary">Keep anyway</button>
     </div>
   </div>
   <div id="pending-actions" class="row" hidden>
-    <button id="pending-discard" class="danger">放棄這張</button>
-    <button id="pending-retry" class="primary">重新上傳</button>
+    <button id="pending-discard" class="danger">Discard</button>
+    <button id="pending-retry" class="primary">Retry</button>
   </div>
-  <p class="hint only-failed">長按照片可以先存進相簿。</p>
+  <p class="hint only-failed">Long-press the photo to save it to Photos.</p>
 </section>
 
 <!-- 今天已經拍過 -->
@@ -76,17 +76,17 @@
     <div id="today-sub" class="sub"></div>
   </div>
   <nav class="nav bottom">
-    <button id="today-wall">總覽</button>
-    <button id="today-book">小時書</button>
+    <button id="today-wall">Wall</button>
+    <button id="today-book">Hours</button>
   </nav>
-  <button id="today-cheat" class="cheat">作弊</button>
+  <button id="today-cheat" class="cheat">cheat</button>
 </section>
 
 <!-- 總覽 -->
 <section id="scr-wall" class="screen" hidden>
   <header class="bar">
-    <button class="back" data-back aria-label="返回">‹</button>
-    <div id="wall-progress">已收集 0 / 1440</div>
+    <button class="back" data-back aria-label="Back">‹</button>
+    <div id="wall-progress">0/1440</div>
     <span class="bar-spacer"></span>
   </header>
   <div id="wall-labels" class="hour-labels"></div>
@@ -99,7 +99,7 @@
 <!-- 小時書 -->
 <section id="scr-book" class="screen" hidden>
   <header class="bar">
-    <button class="back" data-back aria-label="返回">‹</button>
+    <button class="back" data-back aria-label="Back">‹</button>
     <div id="book-title"></div>
     <span class="bar-spacer"></span>
   </header>
@@ -110,7 +110,7 @@
 <!-- 看單張 -->
 <section id="scr-view" class="screen" hidden>
   <header class="bar">
-    <button class="back" data-back aria-label="返回">‹</button>
+    <button class="back" data-back aria-label="Back">‹</button>
     <div id="view-title"></div>
     <span class="bar-spacer"></span>
   </header>
@@ -119,6 +119,6 @@
 </section>
 
 <div id="toast" hidden></div>
-<script src="app.js?v=4"></script>
+<script src="app.js?v=5"></script>
 </body>
 </html>

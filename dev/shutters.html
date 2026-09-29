@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#1a1a1c">
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;700&display=swap" rel="stylesheet">
+<title>1440 · shutter options</title>
+<style>
+  :root {
+    --bg: #1a1a1c; --shadow-d: #0d0d0e; --shadow-l: #272729; --photo-bg: #0b0b0c;
+    --fg: #f2f2f4; --dim: #8e8e93; --faint: #4a4a4d;
+    --accent: #f5b544; --accent-dim: #6b4d1c; --accent-glow: rgba(245, 181, 68, .18);
+    --raise-s: 4px 4px 8px var(--shadow-d), -4px -4px 8px var(--shadow-l);
+    --raise-m: 7px 7px 14px var(--shadow-d), -7px -7px 14px var(--shadow-l);
+    --raise-l: 14px 14px 28px var(--shadow-d), -14px -14px 28px var(--shadow-l);
+    --press-s: inset 3px 3px 6px var(--shadow-d), inset -3px -3px 6px var(--shadow-l);
+    --press-m: inset 6px 6px 12px var(--shadow-d), inset -6px -6px 12px var(--shadow-l);
+    --press-l: inset 10px 10px 20px var(--shadow-d), inset -10px -10px 20px var(--shadow-l);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 "Lexend", -apple-system, system-ui, sans-serif; }
+  body { padding: calc(20px + env(safe-area-inset-top)) 20px calc(40px + env(safe-area-inset-bottom)); }
+  h1 { font-size: 22px; font-weight: 500; margin: 0 0 4px; }
+  .intro { color: var(--dim); font-size: 14px; margin: 0 0 8px; }
+  .opt { display: flex; flex-direction: column; align-items: center; padding: 40px 0 36px; border-bottom: 1px solid #232325; }
+  .tag { align-self: flex-start; font-size: 13px; color: var(--dim); letter-spacing: .04em; }
+  .tag b { color: var(--fg); font-weight: 500; font-size: 17px; margin-right: 8px; }
+  .clock { font-size: 56px; font-weight: 700; letter-spacing: -.03em; line-height: 1; margin-top: 18px; font-variant-numeric: tabular-nums; }
+  .status { color: var(--accent); font-size: 15px; margin: 8px 0 30px; }
+  .status::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); margin-right: 8px; vertical-align: 1px; }
+  .note { color: var(--dim); font-size: 13px; margin-top: 22px; text-align: center; max-width: 300px; }
+  button { font: inherit; border: none; padding: 0; background: none; color: inherit; cursor: pointer; }
+  button:focus { outline: none; }
+
+  /* A · iOS camera: white ring + solid white disc */
+  .a { width: 96px; height: 96px; border-radius: 50%; border: 5px solid var(--fg); display: grid; place-items: center; }
+  .a::after { content: ''; width: 76px; height: 76px; border-radius: 50%; background: var(--fg); transition: transform .12s ease; }
+  .a:active::after { transform: scale(.88); }
+
+  /* B · Indicator: soft raised disc, amber light in the middle */
+  .b { width: 150px; height: 150px; border-radius: 50%; background: var(--bg); box-shadow: var(--raise-l); display: grid; place-items: center; transition: box-shadow .1s ease; }
+  .b::after { content: ''; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 14px var(--accent), 0 0 34px var(--accent-glow); transition: transform .12s ease; }
+  .b:active { box-shadow: var(--press-l); }
+  .b:active::after { transform: scale(1.5); }
+
+  /* C · Amber ring: thin glowing ring, empty center */
+  .c { width: 120px; height: 120px; border-radius: 50%; border: 3px solid var(--accent); box-shadow: 0 0 22px var(--accent-glow), inset 0 0 22px var(--accent-glow); transition: background .12s ease; }
+  .c:active { background: var(--accent); }
+
+  /* D · Minute dial: 60 ticks, lit ticks = minutes you own this hour */
+  .d { position: relative; width: 170px; height: 170px; border-radius: 50%; }
+  .d svg { position: absolute; inset: 0; }
+  .d .core { position: absolute; inset: 34px; border-radius: 50%; background: var(--bg); box-shadow: var(--raise-m); transition: box-shadow .1s ease; }
+  .d:active .core { box-shadow: var(--press-m); }
+
+  /* E · Solid key: flat white disc with a soft drop, like a physical key cap */
+  .e { width: 110px; height: 110px; border-radius: 50%; background: linear-gradient(160deg, #ffffff, #d9d9dd); box-shadow: 0 10px 24px rgba(0,0,0,.55), inset 0 -3px 0 rgba(0,0,0,.12); transition: transform .08s ease, box-shadow .08s ease; }
+  .e:active { transform: translateY(3px); box-shadow: 0 4px 10px rgba(0,0,0,.55), inset 0 -1px 0 rgba(0,0,0,.12); }
+
+  /* F · Well: a bowl pressed into the surface with a small raised button inside */
+  .f { width: 170px; height: 170px; border-radius: 50%; background: var(--bg); box-shadow: var(--press-l); display: grid; place-items: center; }
+  .f::after { content: ''; width: 92px; height: 92px; border-radius: 50%; background: var(--bg); box-shadow: var(--raise-m); transition: box-shadow .1s ease; }
+  .f:active::after { box-shadow: var(--press-s); }
+
+  /* G · Minute face: the button shows the current minute */
+  .g { width: 140px; height: 140px; border-radius: 50%; background: var(--bg); box-shadow: var(--raise-l); display: grid; place-items: center; font-size: 46px; font-weight: 700; letter-spacing: -.02em; color: var(--accent); font-variant-numeric: tabular-nums; transition: box-shadow .1s ease; }
+  .g:active { box-shadow: var(--press-l); }
+</style>
+</head>
+<body>
+<h1>Shutter options</h1>
+<p class="intro">Tap each one to feel the press. Tell me the letter you like.</p>
+
+<section class="opt">
+  <div class="tag"><b>A</b>iOS camera</div>
+  <div class="clock" data-clock></div><div class="status" data-status></div>
+  <button class="a" aria-label="A"></button>
+  <p class="note">The shutter everyone already knows. Instantly readable, the most "camera" of all.</p>
+</section>
+
+<section class="opt">
+  <div class="tag"><b>B</b>Indicator light</div>
+  <div class="clock" data-clock></div><div class="status" data-status></div>
+  <button class="b" aria-label="B"></button>
+  <p class="note">Keeps the soft raised disc, with one amber light in the middle, like a machine that's ready.</p>
+</section>
+
+<section class="opt">
+  <div class="tag"><b>C</b>Amber ring</div>
+  <div class="clock" data-clock></div><div class="status" data-status></div>
+  <button class="c" aria-label="C"></button>
+  <p class="note">Just a thin glowing ring. Fills with amber when you press. The quietest option.</p>
+</section>
+
+<section class="opt">
+  <div class="tag"><b>D</b>Minute dial</div>
+  <div class="clock" data-clock></div><div class="status" data-status></div>
+  <button class="d" aria-label="D"><svg id="dial" viewBox="0 0 170 170"></svg><span class="core"></span></button>
+  <p class="note">60 ticks around the button, one per minute of this hour. Lit ticks are minutes you own, the current minute blinks. Replaces the "This hour n/60" line.</p>
+</section>
+
+<section class="opt">
+  <div class="tag"><b>E</b>Key cap</div>
+  <div class="clock" data-clock></div><div class="status" data-status></div>
+  <button class="e" aria-label="E"></button>
+  <p class="note">A solid white key that physically sinks when pressed. Bright and tactile against the dark screen.</p>
+</section>
+
+<section class="opt">
+  <div class="tag"><b>F</b>Well</div>
+  <div class="clock" data-clock></div><div class="status" data-status></div>
+  <button class="f" aria-label="F"></button>
+  <p class="note">A bowl pressed into the surface with a small button sitting in it. The reverse of the current one.</p>
+</section>
+
+<section class="opt">
+  <div class="tag"><b>G</b>Minute face</div>
+  <div class="clock" data-clock></div><div class="status" data-status></div>
+  <button class="g" aria-label="G" data-minute></button>
+  <p class="note">The button shows the minute you're about to collect. The big clock above could then shrink.</p>
+</section>
+
+<script>
+  function two(n) { return (n < 10 ? '0' : '') + n; }
+  // 範例用：假裝這一小時已經收了幾格
+  var owned = [3, 7, 8, 15, 22, 31, 40, 41, 52];
+  function dial(min) {
+    var svg = document.getElementById('dial'), out = '';
+    for (var i = 0; i < 60; i++) {
+      var a = (i / 60) * Math.PI * 2 - Math.PI / 2, big = i % 5 === 0;
+      var r1 = big ? 70 : 73, r2 = 82;
+      var x1 = 85 + Math.cos(a) * r1, y1 = 85 + Math.sin(a) * r1, x2 = 85 + Math.cos(a) * r2, y2 = 85 + Math.sin(a) * r2;
+      var col = i === min ? '#f5b544' : owned.indexOf(i) >= 0 ? '#f2f2f4' : '#3a3a3d';
+      var cls = i === min ? ' class="blink"' : '';
+      out += '<line' + cls + ' x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '" stroke="' + col + '" stroke-width="' + (big ? 2.4 : 1.8) + '" stroke-linecap="round"/>';
+    }
+    svg.innerHTML = '<style>.blink{animation:b 1.2s ease-in-out infinite}@keyframes b{50%{opacity:.25}}</style>' + out;
+  }
+  function tick() {
+    var d = new Date(), m = two(d.getHours()) + ':' + two(d.getMinutes());
+    document.querySelectorAll('[data-clock]').forEach(function (e) { e.textContent = m; });
+    document.querySelectorAll('[data-status]').forEach(function (e) { e.textContent = m + ' free'; });
+    document.querySelectorAll('[data-minute]').forEach(function (e) { e.textContent = ':' + two(d.getMinutes()); });
+    dial(d.getMinutes());
+  }
+  tick(); setInterval(tick, 1000);
+</script>
+</body>
+</html>
