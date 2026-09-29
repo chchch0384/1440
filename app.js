@@ -11,12 +11,6 @@ var THUMB_BATCH = 60, MEDIUM_KEEP = 50, REFRESH_MS = 10 * 60 * 1000;
 var $ = function (id) { return document.getElementById(id); };
 var ACCENT = '#ff8a2b', ACCENT_DIM = '#5a3312';   // 唯一的強調色，跟 style.css 的 --accent 一樣
 function two(n) { return (n < 10 ? '0' : '') + n; }
-// 底片相機的日期印字：'26 9 29  15:21
-function stampText(date, minute) {
-  var p = String(date || '').split('-');
-  if (p.length !== 3) return minute || '';
-  return "'" + p[0].slice(2) + ' ' + (+p[1]) + ' ' + (+p[2]) + '  ' + minute;
-}
 function fmtDate(d) { return d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate()); }
 function fmtMinute(d) { return two(d.getHours()) + ':' + two(d.getMinutes()); }
 function fmtISO(d) {
@@ -470,7 +464,6 @@ function processPhoto(file, meta) {
   $('pending-ask').hidden = true; $('pending-actions').hidden = true;
   setPendingImg(file);
   setPendingUI('Processing…', meta.minute);
-  $('pending-stamp').textContent = stampText(meta.date, meta.minute);
   var img;
   return loadImage(file).then(function (im) {
     img = im;
@@ -499,7 +492,6 @@ function showPending(p) {
   show('scr-pending');
   $('pending-ask').hidden = true; $('pending-actions').hidden = true;
   setPendingImg(p.medium || p.photo);
-  $('pending-stamp').textContent = stampText(p.date, p.minute);
   if (p.status === 'confirmed') return upload(p);
   return decide(p);
 }
@@ -610,7 +602,6 @@ function showToday(t) {
   $('today-title').textContent = 'Today ' + last.minute;
   if (t.length > 1) tags.push(t.length + ' moments today');
   $('today-sub').textContent = tags.join(' · ');
-  $('today-stamp').textContent = stampText(last.date, last.minute);
   showPhotoInto($('today-img'), last);
 }
 $('today-wall').onclick = function () { showWall(); };
@@ -858,7 +849,6 @@ function showView(r) {
   if (r.cheat) tags.push('cheat');
   if (extra) tags.push(extra + ' more this minute');
   $('view-sub').textContent = tags.join(' · ');
-  $('view-stamp').textContent = stampText(r.date, r.minute);
   showPhotoInto($('view-img'), r);
 }
 
