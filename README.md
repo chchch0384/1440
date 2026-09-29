@@ -54,6 +54,16 @@ Google Apps Script（收件員：檢查密鑰、判斷第一張、標記作弊�
 | manifest.json、icons/ | 加入主畫面用的名稱與圖示 |
 | apps-script/Code.gs | 貼到 Google Apps Script 的收件員程式 |
 | dev/mock_api.py | 本機開發用的假 Apps Script，跑 `python dev/mock_api.py` 後開 http://localhost:8000/#k=test&api=http://localhost:8000/api |
+| dev/test-camera-c.html | 第 0 階段路 C 相機測試頁 |
+
+## 更新收件員程式碼
+
+每次 Code.gs 有新版：
+
+1. 把新的 [apps-script/Code.gs](apps-script/Code.gs) 全部貼上取代，存檔
+2. 部署 → 管理部署作業 → 按鉛筆 → 版本選「新版本」→ 部署
+
+網址不會變，專屬連結也不用重貼。只存檔、沒發新版本的話，網址跑的還是舊程式碼。
 
 ## 出事了怎麼辦
 

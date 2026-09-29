@@ -19,6 +19,12 @@
  *                                                   → { ok, lit, cheat, row }
  *   { key, action: 'thumbs', ids: [thumb_id, ...] } → { ok, thumbs: { id: base64, ... } }（一次最多 60 張）
  *   { key, action: 'photo', id: file_id }           → { ok, data: base64, name }
+ *   { key, action: 'find', uid }                    → { ok, row }（row 可能是 null）
+ *
+ * iPhone Safari 有時擋掉跨網域的 fetch，所以另外開兩條備援路：
+ *   讀取：GET ?cb=函式名&p=JSON（JSONP，用 <script> 載入，不經過 CORS）
+ *   上傳：表單 POST，欄位 payload=JSON（送進隱藏 iframe），之後用 find 查 uid 確認
+ *   同一個 uid 重送只會存一次
  *
  * 規則都在這裡判斷，手機端算錯也蓋不掉：
  *   lit   = 這一分鐘還沒有點亮的照片
@@ -30,7 +36,7 @@ var ROOT_FOLDER = '1440';
 var SHEET_TITLE = '1440-紀錄';
 var RECORDS = '紀錄';
 var SETTINGS = '設定';
-var HEADERS = ['date', 'minute', 'taken_at', 'file_id', 'thumb_id', 'lit', 'cheat', 'note', 'file_name'];
+var HEADERS = ['date', 'minute', 'taken_at', 'file_id', 'thumb_id', 'lit', 'cheat', 'note', 'file_name', 'uid'];
 var THUMB_BATCH = 60;
 
 var props_ = PropertiesService.getScriptProperties();
@@ -61,10 +67,7 @@ function setup() {
     if (ss.getSheets().length === 1 && first.getLastRow() === 0) { first.setName(RECORDS); rec = first; }
     else rec = ss.insertSheet(RECORDS);
   }
-  if (rec.getLastRow() === 0) {
-    rec.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]).setFontWeight('bold');
-    rec.setFrozenRows(1);
-  }
+  ensureHeaders_(rec);
   rec.getRange(1, 1, rec.getMaxRows(), 3).setNumberFormat('@');
 
   var set = ss.getSheetByName(SETTINGS) || ss.insertSheet(SETTINGS);
@@ -106,8 +109,16 @@ function makeKey_() {
 // ───────────── 網頁應用程式入口 ─────────────
 
 function doGet(e) {
+  var p = (e && e.parameter) || {};
+  if (p.cb) {
+    if (!/^[A-Za-z_$][\w$]{0,40}$/.test(p.cb)) return ContentService.createTextOutput('');
+    var req;
+    try { req = JSON.parse(p.p || '{}'); } catch (err) { req = null; }
+    var res = req ? handle_(req, true) : { ok: false, error: 'bad_json' };
+    return ContentService.createTextOutput(p.cb + '(' + JSON.stringify(res) + ');').setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
   recordWebAppUrl_();
-  if (e && e.parameter && e.parameter.format === 'json') return json_({ ok: true, app: '1440' });
+  if (p.format === 'json') return json_({ ok: true, app: '1440' });
   return HtmlService.createHtmlOutput(
     '<meta name="viewport" content="width=device-width,initial-scale=1">' +
     '<body style="font:18px/1.6 -apple-system,system-ui,sans-serif;padding:24px">' +
@@ -118,22 +129,29 @@ function doGet(e) {
 
 function doPost(e) {
   var req;
-  try { req = JSON.parse(e.postData.contents); } catch (err) { return json_({ ok: false, error: 'bad_json' }); }
-  var key = props_.getProperty('KEY');
-  if (!key) return json_({ ok: false, error: 'not_setup' });
-  if (!req || String(req.key || '') !== key) return json_({ ok: false, error: 'bad_key' });
+  try {
+    var raw = (e.parameter && e.parameter.payload) || e.postData.contents;
+    req = JSON.parse(raw);
+  } catch (err) { return json_({ ok: false, error: 'bad_json' }); }
+  return json_(handle_(req, false));
+}
 
+function handle_(req, viaGet) {
+  var key = props_.getProperty('KEY');
+  if (!key) return { ok: false, error: 'not_setup' };
+  if (!req || String(req.key || '') !== key) return { ok: false, error: 'bad_key' };
   try {
     switch (req.action) {
-      case 'ping':   return json_({ ok: true, time: new Date().toISOString() });
-      case 'list':   return json_({ ok: true, columns: HEADERS, rows: listRows_() });
-      case 'upload': return json_(upload_(req));
-      case 'thumbs': return json_({ ok: true, thumbs: getThumbs_(req.ids) });
-      case 'photo':  return json_(getPhoto_(req.id));
-      default:       return json_({ ok: false, error: 'bad_action' });
+      case 'ping':   return { ok: true, time: new Date().toISOString() };
+      case 'list':   return { ok: true, columns: HEADERS, rows: listRows_() };
+      case 'thumbs': return { ok: true, thumbs: getThumbs_(req.ids) };
+      case 'photo':  return getPhoto_(req.id);
+      case 'find':   return { ok: true, row: findUid_(req.uid) };
+      case 'upload': return viaGet ? { ok: false, error: 'upload_needs_post' } : upload_(req);
+      default:       return { ok: false, error: 'bad_action' };
     }
   } catch (err) {
-    return json_({ ok: false, error: 'server', message: String((err && err.message) || err) });
+    return { ok: false, error: 'server', message: String((err && err.message) || err) };
   }
 }
 
@@ -160,12 +178,18 @@ function upload_(req) {
   if (!req.photo) return { ok: false, error: 'no_photo' };
   var takenAt = String(req.taken_at || (date + 'T' + minute + ':00'));
   var note = String(req.note || '');
+  var uid = String(req.uid || '').slice(0, 64);
 
   var lock = LockService.getScriptLock();
   lock.waitLock(30000);
   try {
     var sheet = getRecords_();
+    ensureHeaders_(sheet);
     var rows = readRows_(sheet);
+    if (uid) {
+      var dup = rows.filter(function (r) { return r.uid === uid; })[0];
+      if (dup) return { ok: true, lit: dup.lit, cheat: dup.cheat, row: toList_(dup), duplicate: true };
+    }
     var lit = !rows.some(function (r) { return r.minute === minute && r.lit; });
     var todayHasRows = rows.some(function (r) { return r.date === date; });
     var cheat = todayHasRows || req.cheat === true || String(req.cheat).toLowerCase() === 'true';
@@ -180,9 +204,9 @@ function upload_(req) {
     var thumbId = '';
     if (req.thumb) thumbId = thumbs.createFile(blob_(req.thumb, name)).getId();
 
-    var row = [date, minute, takenAt, file.getId(), thumbId, lit, cheat, note, name];
+    var row = [date, minute, takenAt, file.getId(), thumbId, lit, cheat, note, name, uid];
     appendRow_(sheet, row);
-    return { ok: true, lit: lit, cheat: cheat, row: row };
+    return { ok: true, lit: lit, cheat: cheat, row: [date, minute, takenAt, row[3], thumbId, lit ? 1 : 0, cheat ? 1 : 0, note, name, uid] };
   } finally {
     lock.releaseLock();
   }
@@ -219,15 +243,32 @@ function readRows_(sheet) {
       lit: asBool_(v[5]),
       cheat: asBool_(v[6]),
       note: String(v[7] || ''),
-      file_name: String(v[8] || '')
+      file_name: String(v[8] || ''),
+      uid: String(v[9] || '')
     };
   });
 }
 
 function listRows_() {
-  return readRows_(getRecords_()).map(function (r) {
-    return [r.date, r.minute, r.taken_at, r.file_id, r.thumb_id, r.lit ? 1 : 0, r.cheat ? 1 : 0, r.note, r.file_name];
-  });
+  return readRows_(getRecords_()).map(toList_);
+}
+
+function toList_(r) {
+  return [r.date, r.minute, r.taken_at, r.file_id, r.thumb_id, r.lit ? 1 : 0, r.cheat ? 1 : 0, r.note, r.file_name, r.uid];
+}
+
+function findUid_(uid) {
+  uid = String(uid || '');
+  if (!uid) return null;
+  var hit = readRows_(getRecords_()).filter(function (r) { return r.uid === uid; })[0];
+  return hit ? toList_(hit) : null;
+}
+
+function ensureHeaders_(sheet) {
+  var have = sheet.getLastRow() === 0 ? [] : sheet.getRange(1, 1, 1, HEADERS.length).getValues()[0];
+  if (HEADERS.every(function (h, i) { return have[i] === h; })) return;
+  sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]).setFontWeight('bold');
+  sheet.setFrozenRows(1);
 }
 
 function getThumbs_(ids) {
@@ -284,7 +325,7 @@ function rebuildFromFilenames() {
   var rows = items.map(function (x) {
     var lit = !seen[x.minute];
     seen[x.minute] = true;
-    return [x.date, x.minute, x.date + 'T' + x.minute + ':00', x.id, x.thumb, lit, x.cheat, '', x.name];
+    return [x.date, x.minute, x.date + 'T' + x.minute + ':00', x.id, x.thumb, lit, x.cheat, '', x.name, ''];
   });
 
   var sheet = getRecords_();

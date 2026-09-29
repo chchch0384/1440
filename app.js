@@ -18,7 +18,7 @@ function fmtISO(d) {
   return fmtDate(d) + 'T' + fmtMinute(d) + ':' + two(d.getSeconds()) + sign + two(Math.floor(off / 60)) + ':' + two(off % 60);
 }
 function truthy(v) { return v === true || v === 1 || v === '1' || v === 'TRUE' || v === 'true'; }
-function errMsg(e) { return String((e && e.message) || e || '未知錯誤'); }
+function errMsg(e) { return String((e && (e.message || e.name)) || e || '未知錯誤（可能是手機儲存空間）'); }
 var standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
 
 var toastTimer = null;
@@ -54,25 +54,99 @@ function parseLink(text) {
 // ───────────── 跟 Apps Script 說話 ─────────────
 // 用 text/plain 送 JSON，瀏覽器就不會先送 CORS 預檢，Apps Script 才收得到。
 
+// 連線有兩條路：
+//   fetch：一般的 POST（text/plain 才不會觸發 CORS 預檢）
+//   備援：讀取用 JSONP（<script> 載入）、上傳用表單送進隱藏 iframe 再用 uid 查
+// iPhone Safari 有時會擋掉跨網域 fetch，擋到一次就記住，之後直接走備援。
+var transport = (function () { try { return localStorage.getItem('transport') || 'fetch'; } catch (e) { return 'fetch'; } })();
+function setTransport(t) { transport = t; try { localStorage.setItem('transport', t); } catch (e) {} }
+
+function ServerError(msg) { var e = new Error(msg); e.server = true; return e; }
+var SERVER_MSG = {
+  bad_key: '密鑰不對，重新複製試算表「設定」分頁 B7 整串',
+  not_setup: '收件員還沒設定，先在 Apps Script 執行 setup',
+  bad_action: '收件員是舊版，請把新的 Code.gs 貼上並部署新版本',
+  upload_needs_post: '收件員設定有誤'
+};
+function checkReply(j) {
+  if (!j || !j.ok) throw ServerError((j && (j.message || SERVER_MSG[j.error] || j.error)) || '回應格式錯誤');
+  return j;
+}
+
 function call(action, data) {
   var body = { key: cfg.k, action: action };
   if (data) Object.keys(data).forEach(function (k) { body[k] = data[k]; });
-  // credentials: 'omit' 不帶 Google 登入 cookie，免得 Safari 被導到登入頁或帳號選擇頁
+  if (transport === 'alt') return callAlt(body);
+  return callFetch(body).catch(function (e) {
+    if (e.server) throw e;
+    // fetch 這條路壞了，換備援再試一次；備援通了就記住
+    return callAlt(body).then(function (j) { setTransport('alt'); return j; }, function (e2) {
+      throw new Error('兩種連線都失敗。fetch：' + errMsg(e) + '；備援：' + errMsg(e2));
+    });
+  });
+}
+
+function callFetch(body) {
   return fetch(cfg.api, {
     method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body),
     credentials: 'omit', redirect: 'follow', cache: 'no-store'
-  }).catch(function (e) {
-    throw new Error('網路連不到收件員（' + errMsg(e) + '）');
   }).then(function (r) {
     return r.text().then(function (t) {
       var j;
       try { j = JSON.parse(t); } catch (e) {
-        var peek = t.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
-        throw new Error('收件員回的不是資料（HTTP ' + r.status + '，' + (r.url || '').split('?')[0].slice(0, 60) + '）：' + (peek || '空白'));
+        var peek = t.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
+        throw new Error('回的不是資料（HTTP ' + r.status + '）' + (peek ? '：' + peek : ''));
       }
-      if (!j || !j.ok) throw new Error((j && (j.message || j.error)) || '回應格式錯誤');
-      return j;
+      return checkReply(j);
     });
+  });
+}
+
+function callAlt(body) {
+  return body.action === 'upload' ? uploadAlt(body) : jsonp(body);
+}
+
+var jsonpSeq = 0;
+function jsonp(body, timeoutMs) {
+  return new Promise(function (resolve, reject) {
+    var name = '__1440cb' + Date.now().toString(36) + (jsonpSeq++);
+    var s = document.createElement('script');
+    var timer = setTimeout(function () { finish(); reject(new Error('備援逾時')); }, timeoutMs || 25000);
+    function finish() { clearTimeout(timer); try { delete window[name]; } catch (e) { window[name] = undefined; } if (s.parentNode) s.parentNode.removeChild(s); }
+    window[name] = function (j) { finish(); try { resolve(checkReply(j)); } catch (e) { reject(e); } };
+    s.onerror = function () { finish(); reject(new Error('備援載入失敗')); };
+    s.src = cfg.api + (cfg.api.indexOf('?') < 0 ? '?' : '&') + 'cb=' + name + '&p=' + encodeURIComponent(JSON.stringify(body)) + '&_=' + Date.now();
+    document.head.appendChild(s);
+  });
+}
+
+// 表單 POST 送進隱藏 iframe（看不到回應），再用 uid 反覆查有沒有存進去
+function uploadAlt(body) {
+  if (!body.uid) return Promise.reject(new Error('缺少 uid'));
+  return new Promise(function (resolve) {
+    var name = 'up' + Date.now();
+    var ifr = document.createElement('iframe');
+    ifr.name = name; ifr.style.display = 'none';
+    var form = document.createElement('form');
+    form.method = 'POST'; form.action = cfg.api; form.target = name; form.style.display = 'none';
+    var field = document.createElement('textarea');
+    field.name = 'payload'; field.value = JSON.stringify(body);
+    form.appendChild(field);
+    document.body.appendChild(ifr); document.body.appendChild(form);
+    var done = false;
+    function cleanup() { if (done) return; done = true; setTimeout(function () { ifr.remove(); form.remove(); }, 1000); resolve(); }
+    ifr.onload = cleanup;
+    setTimeout(cleanup, 60000);
+    form.submit();
+  }).then(function () {
+    return pollUid(body.uid, 10);
+  });
+}
+function pollUid(uid, tries) {
+  return jsonp({ key: cfg.k, action: 'find', uid: uid }).then(function (j) {
+    if (j.row) return { ok: true, lit: truthy(j.row[5]), cheat: truthy(j.row[6]), row: j.row };
+    if (tries <= 1) throw new Error('送出了，但收件員還沒收到，稍後會再試');
+    return new Promise(function (r) { setTimeout(r, 3000); }).then(function () { return pollUid(uid, tries - 1); });
   });
 }
 
@@ -98,13 +172,35 @@ function idb(store, mode, fn) {
       var tx = d.transaction(store, mode);
       var req = fn(tx.objectStore(store));
       tx.oncomplete = function () { res(req ? req.result : undefined); };
-      tx.onerror = function () { rej(tx.error); };
-      tx.onabort = function () { rej(tx.error); };
+      tx.onerror = function () { rej(tx.error || new Error('手機暫存寫入失敗')); };
+      tx.onabort = function () { rej(tx.error || new Error('手機暫存寫入被中斷')); };
     });
   });
 }
-function idbGet(store, key) { return idb(store, 'readonly', function (s) { return s.get(key); }); }
-function idbPut(store, key, val) { return idb(store, 'readwrite', function (s) { s.put(val, key); }); }
+// Blob 直接存進 IndexedDB 在部分 Safari/WebKit 會失敗，所以一律轉成 ArrayBuffer 存、讀出來再變回 Blob
+function blobToBuf(b) {
+  if (b.arrayBuffer) return b.arrayBuffer();
+  return new Promise(function (res, rej) { var fr = new FileReader(); fr.onload = function () { res(fr.result); }; fr.onerror = function () { rej(fr.error); }; fr.readAsArrayBuffer(b); });
+}
+function packVal(v) {
+  if (v instanceof Blob) return blobToBuf(v).then(function (buf) { return { __blob: buf, type: v.type }; });
+  if (v && typeof v === 'object' && !Array.isArray(v)) {
+    var out = {}, jobs = [];
+    Object.keys(v).forEach(function (k) {
+      if (v[k] instanceof Blob) jobs.push(packVal(v[k]).then(function (x) { out[k] = x; }));
+      else out[k] = v[k];
+    });
+    return Promise.all(jobs).then(function () { return out; });
+  }
+  return Promise.resolve(v);
+}
+function unpackVal(v) {
+  if (v && v.__blob) return new Blob([v.__blob], { type: v.type || 'image/jpeg' });
+  if (v && typeof v === 'object' && !Array.isArray(v)) Object.keys(v).forEach(function (k) { if (v[k] && v[k].__blob) v[k] = unpackVal(v[k]); });
+  return v;
+}
+function idbGet(store, key) { return idb(store, 'readonly', function (s) { return s.get(key); }).then(unpackVal); }
+function idbPut(store, key, val) { return packVal(val).then(function (pv) { return idb(store, 'readwrite', function (s) { s.put(pv, key); }); }); }
 function idbDel(store, key) { return idb(store, 'readwrite', function (s) { s.delete(key); }); }
 function idbKeys(store) { return idb(store, 'readonly', function (s) { return s.getAllKeys(); }); }
 
@@ -266,6 +362,7 @@ $('setup-save').onclick = function () {
   msg.textContent = '測試連線中…';
   $('setup-save').disabled = true;
   var old = cfg; cfg = c;
+  setTransport('fetch');
   call('ping').then(function () {
     saveCfg(c);
     msg.textContent = '連上了 ✅';
@@ -273,7 +370,7 @@ $('setup-save').onclick = function () {
     return boot();
   }).catch(function (e) {
     cfg = old;
-    msg.textContent = '連不上：' + errMsg(e) + '。檢查 Apps Script 有沒有部署成「所有人」、密鑰對不對。';
+    msg.textContent = '連不上：' + errMsg(e);
   }).then(function () { $('setup-save').disabled = false; });
 };
 $('wall-resetup').onclick = function () { showSetup(); };
@@ -413,7 +510,7 @@ function upload(p) {
   return persist.then(function () {
     return Promise.all([blobToB64(p.photo), blobToB64(p.thumb)]);
   }).then(function (b) {
-    return call('upload', { date: p.date, minute: p.minute, taken_at: p.taken_at, cheat: !!p.cheat, photo: b[0], thumb: b[1] });
+    return call('upload', { uid: p.id, date: p.date, minute: p.minute, taken_at: p.taken_at, cheat: !!p.cheat, photo: b[0], thumb: b[1] });
   }).then(function (j) {
     var r = j.row;
     raw.push(r); setRows(raw); saveRowsCache();
