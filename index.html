@@ -7,14 +7,14 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="1440">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#1a1a1c">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=5">
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=6">
 <title>1440</title>
 </head>
 <body>
@@ -22,13 +22,13 @@
 <!-- 設定：貼上專屬連結（只做一次） -->
 <section id="scr-setup" class="screen" hidden>
   <h1 class="logo">1440</h1>
-  <p class="lead">貼上你的專屬連結，只要做這一次。</p>
-  <p id="setup-warn" class="warn" hidden>你現在是用 Safari 打開的。建議先「分享 → 加入主畫面」，再從主畫面的圖示打開來貼，密鑰才會存在 App 自己的空間裡。</p>
+  <p class="lead">貼上你的專屬連結。</p>
+  <p id="setup-warn" class="warn" hidden>你現在是用 Safari 打開的。建議先加入主畫面，再從主畫面的圖示打開來貼。</p>
   <textarea id="setup-link" rows="4" placeholder="https://chchch0384.github.io/1440/#k=…&amp;api=https://script.google.com/…" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
-  <button id="setup-save" class="primary">儲存並測試連線</button>
+  <button id="setup-save" class="primary">儲存</button>
   <p id="setup-msg" class="msg"></p>
-  <p class="hint">專屬連結在 Google 試算表「1440-紀錄」的「設定」分頁 B7。</p>
-  <p class="hint bottom center-text"><button id="setup-cancel" class="link" hidden>取消</button></p>
+  <p class="hint">連結在試算表「1440-紀錄」的「設定」分頁 B7。</p>
+  <nav class="nav bottom"><button id="setup-cancel" hidden>取消</button></nav>
 </section>
 
 <!-- 拍照畫面 -->
@@ -40,12 +40,11 @@
   </div>
   <button id="btn-shoot" class="shoot">拍</button>
   <input id="file" type="file" accept="image/*" capture="environment" hidden>
-  <p id="cheat-banner" class="cheat-banner" hidden>作弊模式：這張會標記為作弊</p>
-  <p class="hint">拍 → 快門 → 使用照片</p>
-  <div class="bottom-links">
-    <button id="shoot-cancel-cheat" class="link" hidden>取消作弊</button>
-    <button id="shoot-wall" class="link">總覽</button>
-  </div>
+  <p id="cheat-banner" class="cheat-banner" hidden>作弊模式</p>
+  <nav class="nav bottom">
+    <button id="shoot-cancel-cheat" hidden>取消作弊</button>
+    <button id="shoot-wall">總覽</button>
+  </nav>
 </section>
 
 <!-- 處理中 / 待上傳 -->
@@ -66,7 +65,7 @@
     <button id="pending-discard" class="danger">放棄這張</button>
     <button id="pending-retry" class="primary">重新上傳</button>
   </div>
-  <p class="hint">還沒上傳成功前，長按照片可以先存進相簿當保險。</p>
+  <p class="hint only-failed">長按照片可以先存進相簿。</p>
 </section>
 
 <!-- 今天已經拍過 -->
@@ -76,11 +75,11 @@
     <div id="today-title" class="title"></div>
     <div id="today-sub" class="sub"></div>
   </div>
-  <div class="row big">
-    <button id="today-wall" class="primary">總覽</button>
-    <button id="today-book" class="primary">小時書</button>
-  </div>
-  <button id="today-cheat" class="cheat">作弊：再拍一張</button>
+  <nav class="nav bottom">
+    <button id="today-wall">總覽</button>
+    <button id="today-book">小時書</button>
+  </nav>
+  <button id="today-cheat" class="cheat">作弊</button>
 </section>
 
 <!-- 總覽 -->
@@ -95,8 +94,6 @@
     <canvas id="wall"></canvas>
     <canvas id="wall-overlay"></canvas>
   </div>
-  <p class="hint center-text">點一欄翻到那一小時</p>
-  <p class="legend center-text"><span class="sw now"></span>現在 <span class="sw today"></span>今天</p>
 </section>
 
 <!-- 小時書 -->
