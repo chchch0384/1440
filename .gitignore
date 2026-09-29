@@ -1,0 +1,11 @@
+# 計畫書留在本機
+1440*計畫書*.md
+
+# 本機 mock 伺服器的暫存
+dev/_data/
+
+.DS_Store
+Thumbs.db
+
+# Playwright 測試輸出
+.playwright-mcp/

@@ -1,47 +1,118 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="1440測試">
-<title>1440 相機測試</title>
-<style>
-  html, body { margin: 0; height: 100%; background: #000; color: #fff; font: 17px/1.5 -apple-system, sans-serif; }
-  video { width: 100%; height: 60vh; object-fit: cover; transform: scaleX(-1); background: #111; }
-  #log { padding: 16px; white-space: pre-line; }
-  b { color: #7CFC98; }
-</style>
+<meta name="apple-mobile-web-app-title" content="1440">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css?v=1">
+<title>1440</title>
 </head>
 <body>
-<video id="v" autoplay playsinline muted></video>
-<div id="log">正在開相機…</div>
-<script>
-  const t0 = performance.now();
-  const log = document.getElementById('log');
-  const standalone = window.navigator.standalone ? '主畫面模式' : 'Safari 模式（不是從主畫面開的）';
-  const n = (localStorage.getItem('opens') | 0) + 1;
-  localStorage.setItem('opens', n);
 
-  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
-    .then(stream => {
-      const v = document.getElementById('v');
-      v.srcObject = stream;
-      v.onloadedmetadata = () => {
-        const sec = ((performance.now() - t0) / 1000).toFixed(2);
-        log.innerHTML =
-          `<b>相機畫面出現：${sec} 秒</b>\n` +
-          `${standalone}\n` +
-          `這台裝置第 ${n} 次打開這頁\n\n` +
-          `剛剛有沒有跳出「允許使用相機？」的視窗？請自己記下來。\n` +
-          `判斷標準：2 秒內出現、而且第 2 次以後不再重問 → 走路 A。`;
-      };
-    })
-    .catch(err => {
-      log.innerHTML = `<b>相機打不開</b>\n${standalone}\n錯誤：${err.name}\n\n` +
-        `如果是 NotAllowedError，代表權限被拒絕：設定 → Safari → 相機 → 允許。`;
-    });
-</script>
+<!-- 設定：貼上專屬連結（只做一次） -->
+<section id="scr-setup" class="screen" hidden>
+  <h1 class="logo">1440</h1>
+  <p class="lead">貼上你的專屬連結，只要做這一次。</p>
+  <p id="setup-warn" class="warn" hidden>你現在是用 Safari 打開的。建議先「分享 → 加入主畫面」，再從主畫面的圖示打開來貼，密鑰才會存在 App 自己的空間裡。</p>
+  <textarea id="setup-link" rows="4" placeholder="https://chchch0384.github.io/1440/#k=…&amp;api=https://script.google.com/…" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
+  <button id="setup-save" class="primary">儲存並測試連線</button>
+  <p id="setup-msg" class="msg"></p>
+  <p class="hint">專屬連結在 Google 試算表「1440-紀錄」的「設定」分頁 B7。</p>
+</section>
+
+<!-- 拍照畫面 -->
+<section id="scr-shoot" class="screen center" hidden>
+  <div class="clock-wrap">
+    <div id="clock" class="clock">--:--</div>
+    <div id="minute-status" class="minute-status">…</div>
+  </div>
+  <button id="btn-shoot" class="shoot">拍</button>
+  <input id="file" type="file" accept="image/*" capture="environment" hidden>
+  <p id="cheat-banner" class="cheat-banner" hidden>作弊模式：這張會標記為作弊</p>
+  <p class="hint">拍 → 快門 → 使用照片</p>
+  <div class="bottom-links">
+    <button id="shoot-cancel-cheat" class="link" hidden>取消作弊</button>
+    <button id="shoot-wall" class="link">總覽</button>
+  </div>
+</section>
+
+<!-- 處理中 / 待上傳 -->
+<section id="scr-pending" class="screen" hidden>
+  <img id="pending-img" alt="">
+  <div class="info">
+    <div id="pending-title" class="title">處理中…</div>
+    <div id="pending-sub" class="sub"></div>
+  </div>
+  <div id="pending-ask" class="ask" hidden>
+    <p id="pending-ask-text"></p>
+    <div class="row">
+      <button id="pending-retake">重拍</button>
+      <button id="pending-keep" class="primary">還是要</button>
+    </div>
+  </div>
+  <div id="pending-actions" class="row" hidden>
+    <button id="pending-discard" class="danger">放棄這張</button>
+    <button id="pending-retry" class="primary">重新上傳</button>
+  </div>
+  <p class="hint">還沒上傳成功前，長按照片可以先存進相簿當保險。</p>
+</section>
+
+<!-- 今天已經拍過 -->
+<section id="scr-today" class="screen" hidden>
+  <img id="today-img" alt="">
+  <div class="info">
+    <div id="today-title" class="title"></div>
+    <div id="today-sub" class="sub"></div>
+  </div>
+  <div class="row big">
+    <button id="today-wall" class="primary">總覽</button>
+    <button id="today-book" class="primary">小時書</button>
+  </div>
+  <button id="today-cheat" class="cheat">作弊：再拍一張</button>
+</section>
+
+<!-- 總覽 -->
+<section id="scr-wall" class="screen" hidden>
+  <header class="bar">
+    <button class="back" data-back aria-label="返回">‹</button>
+    <div id="wall-progress">已收集 0 / 1440</div>
+    <span class="bar-spacer"></span>
+  </header>
+  <div id="wall-labels" class="hour-labels"></div>
+  <canvas id="wall"></canvas>
+  <p class="hint center-text">點一欄翻到那一小時</p>
+  <p class="hint center-text bottom"><button id="wall-resetup" class="link">重新設定專屬連結</button></p>
+</section>
+
+<!-- 小時書 -->
+<section id="scr-book" class="screen" hidden>
+  <header class="bar">
+    <button class="back" data-back aria-label="返回">‹</button>
+    <div id="book-title"></div>
+    <span class="bar-spacer"></span>
+  </header>
+  <div id="book-pages" class="pages"></div>
+</section>
+
+<!-- 看單張 -->
+<section id="scr-view" class="screen" hidden>
+  <header class="bar">
+    <button class="back" data-back aria-label="返回">‹</button>
+    <div id="view-title"></div>
+    <span class="bar-spacer"></span>
+  </header>
+  <img id="view-img" alt="">
+  <div id="view-sub" class="sub"></div>
+</section>
+
+<div id="toast" hidden></div>
+<script src="app.js?v=1"></script>
 </body>
 </html>

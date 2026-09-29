@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="1440測試C">
+<title>1440 路 C 測試</title>
+<style>
+  html, body { margin: 0; min-height: 100%; background: #000; color: #fff; font: 17px/1.5 -apple-system, sans-serif; }
+  body { padding: env(safe-area-inset-top, 0) 16px 32px; }
+  #clock { font-size: 40px; font-weight: 600; margin: 24px 0 4px; }
+  #status { color: #7CFC98; margin-bottom: 24px; }
+  label { display: block; background: #fff; color: #000; text-align: center; padding: 20px; border-radius: 16px; font-size: 22px; font-weight: 600; }
+  input { display: none; }
+  img { width: 100%; margin-top: 24px; border-radius: 12px; }
+  #log { white-space: pre-line; margin-top: 16px; }
+  b { color: #7CFC98; }
+</style>
+</head>
+<body>
+<div id="clock">--:--</div>
+<div id="status">這一分鐘的狀態會顯示在這裡（測試頁固定寫「空的」）</div>
+
+<label for="cam">拍</label>
+<input id="cam" type="file" accept="image/*" capture="environment">
+
+<img id="preview" hidden>
+<div id="log"></div>
+
+<script>
+  const clock = document.getElementById('clock');
+  setInterval(() => {
+    const d = new Date();
+    clock.textContent = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }, 500);
+  document.getElementById('status').textContent = '🟢 空的';
+
+  const standalone = window.navigator.standalone ? '主畫面模式' : 'Safari 模式（不是從主畫面開的）';
+  const n = (localStorage.getItem('opensC') | 0) + 1;
+  localStorage.setItem('opensC', n);
+
+  document.getElementById('cam').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const log = document.getElementById('log');
+    const img = document.getElementById('preview');
+    img.src = URL.createObjectURL(file);
+    img.hidden = false;
+
+    // 在檔案開頭找 EXIF 的拍攝時間，格式像 2026:09:29 22:31:48
+    const head = new Uint8Array(await file.slice(0, 256 * 1024).arrayBuffer());
+    let text = '';
+    for (const b of head) text += String.fromCharCode(b);
+    const m = text.match(/\d{4}:\d{2}:\d{2} \d{2}:\d{2}:\d{2}/);
+
+    img.onload = () => {
+      log.innerHTML =
+        `<b>照片拿到了</b>\n` +
+        `${standalone}，第 ${n} 次打開這頁\n` +
+        `EXIF 拍攝時間：${m ? '<b>' + m[0] + '</b>' : '<b>沒找到</b>（改用檔案時間：' + new Date(file.lastModified).toLocaleString() + '）'}\n` +
+        `尺寸：${img.naturalWidth} × ${img.naturalHeight}\n` +
+        `大小：${(file.size / 1024 / 1024).toFixed(2)} MB\n\n` +
+        `剛剛按「拍」之後，有沒有跳出「允許取用相機？」的視窗？請記下來，關掉再開測三次。`;
+    };
+  });
+</script>
+</body>
+</html>

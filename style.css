@@ -1,0 +1,85 @@
+:root {
+  color-scheme: dark;
+  --bg: #000;
+  --fg: #fff;
+  --dim: #8e8e93;
+  --faint: #48484a;
+  --panel: #1c1c1e;
+  --line: #2c2c2e;
+  --green: #4cd964;
+  --yellow: #ffd60a;
+  --red: #ff453a;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+html, body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 -apple-system, "PingFang TC", "Noto Sans TC", system-ui, sans-serif; }
+body { min-height: 100vh; min-height: 100dvh; }
+
+.screen {
+  min-height: 100vh; min-height: 100dvh;
+  display: flex; flex-direction: column;
+  padding: calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+}
+.screen[hidden] { display: none; }
+.screen.center { align-items: center; justify-content: center; text-align: center; }
+
+h1.logo { font-size: 44px; margin: 24px 0 4px; letter-spacing: -.02em; }
+.lead { font-size: 18px; margin: 0 0 12px; }
+.hint { color: var(--dim); font-size: 14px; margin: 8px 0; }
+.center-text { text-align: center; }
+.bottom { margin-top: auto; }
+.msg { min-height: 1.5em; margin: 8px 0; }
+.warn { color: var(--yellow); font-size: 14px; }
+
+button { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid #3a3a3c; border-radius: 12px; padding: 14px 18px; }
+button.primary { background: var(--fg); color: #000; border-color: var(--fg); font-weight: 600; }
+button.link { background: none; border: none; color: var(--dim); padding: 8px; text-decoration: underline; font-size: 15px; }
+button.danger { color: var(--red); }
+button:disabled { opacity: .5; }
+.row { display: flex; gap: 12px; margin: 8px 0; }
+.row > button { flex: 1; }
+.row.big > button { padding: 18px; font-size: 18px; }
+
+textarea { width: 100%; font: inherit; font-size: 14px; background: var(--panel); color: var(--fg); border: 1px solid #3a3a3c; border-radius: 12px; padding: 12px; margin: 8px 0 12px; word-break: break-all; }
+
+/* 拍照畫面 */
+.clock { font-size: 92px; font-weight: 700; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.minute-status { margin-top: 12px; font-size: 20px; color: var(--dim); }
+.minute-status.free { color: var(--green); }
+.minute-status.owned { color: var(--dim); }
+.shoot { width: 180px; height: 180px; border-radius: 50%; background: #fff; color: #000; font-size: 60px; font-weight: 700; border: none; margin: 56px 0 12px; box-shadow: 0 0 0 10px var(--panel); }
+.shoot:active { transform: scale(.96); }
+.shoot:disabled { opacity: .4; }
+.cheat-banner { color: var(--yellow); margin: 0; }
+.bottom-links { margin-top: auto; padding-top: 24px; display: flex; gap: 24px; }
+
+/* 今天 / 待上傳 / 看單張 */
+#today-img, #pending-img, #view-img { width: 100%; max-height: 60vh; object-fit: contain; border-radius: 12px; background: #111; -webkit-touch-callout: default; }
+.info { margin: 12px 0 16px; }
+.title { font-size: 28px; font-weight: 700; }
+.sub { color: var(--dim); }
+.ask p { font-size: 18px; margin: 8px 0; }
+.cheat { margin-top: auto; align-self: flex-end; background: none; border: none; color: var(--faint); font-size: 13px; padding: 24px 0 0; }
+
+/* 總覽 / 小時書 共用列 */
+.bar { display: flex; align-items: center; justify-content: space-between; margin: -6px 0 10px; }
+.bar .back { background: none; border: none; font-size: 34px; line-height: 1; padding: 0 14px 4px 0; color: var(--fg); }
+.bar-spacer { width: 34px; }
+#wall-progress, #book-title { font-weight: 600; }
+
+/* 總覽 */
+#wall { display: block; margin: 0 auto; border-radius: 4px; background: #111; }
+.hour-labels { display: flex; margin: 0 auto 4px; font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.hour-labels span { flex: 1; text-align: left; }
+
+/* 小時書 */
+.pages { display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; margin: 0 -16px; flex: 1; }
+.pages::-webkit-scrollbar { display: none; }
+.page { flex: 0 0 100%; scroll-snap-align: start; padding: 0 16px; }
+.grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.cell { aspect-ratio: 1; background: #0e0e0e; border: 1px solid var(--line); border-radius: 6px; position: relative; overflow: hidden; }
+.cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cell span { position: absolute; left: 4px; bottom: 1px; font-size: 10px; color: var(--faint); }
+.cell.lit span { color: #fff; text-shadow: 0 0 3px #000, 0 0 3px #000; }
+
+#toast { position: fixed; left: 50%; bottom: calc(40px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: #fff; color: #000; padding: 10px 18px; border-radius: 22px; font-weight: 600; max-width: 90vw; text-align: center; z-index: 9; }
