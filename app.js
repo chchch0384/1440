@@ -57,12 +57,23 @@ function parseLink(text) {
 function call(action, data) {
   var body = { key: cfg.k, action: action };
   if (data) Object.keys(data).forEach(function (k) { body[k] = data[k]; });
-  return fetch(cfg.api, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) })
-    .then(function (r) { return r.json(); })
-    .then(function (j) {
+  // credentials: 'omit' 不帶 Google 登入 cookie，免得 Safari 被導到登入頁或帳號選擇頁
+  return fetch(cfg.api, {
+    method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body),
+    credentials: 'omit', redirect: 'follow', cache: 'no-store'
+  }).catch(function (e) {
+    throw new Error('網路連不到收件員（' + errMsg(e) + '）');
+  }).then(function (r) {
+    return r.text().then(function (t) {
+      var j;
+      try { j = JSON.parse(t); } catch (e) {
+        var peek = t.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+        throw new Error('收件員回的不是資料（HTTP ' + r.status + '，' + (r.url || '').split('?')[0].slice(0, 60) + '）：' + (peek || '空白'));
+      }
       if (!j || !j.ok) throw new Error((j && (j.message || j.error)) || '回應格式錯誤');
       return j;
     });
+  });
 }
 
 // ───────────── IndexedDB：縮圖快取、暫存照片、中圖 ─────────────
