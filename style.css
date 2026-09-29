@@ -84,22 +84,42 @@ textarea {
 @keyframes breathe { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
 .hour-progress { margin-top: 6px; font-size: 14px; color: var(--dim); min-height: 21px; }
 
+/* 快門 F：凹進去的碗，中間坐一顆按鈕；對比拉高，暗處也看得到 */
 .shoot {
   width: 184px; height: 184px; border-radius: 50%;
-  background: var(--bg); border: none; margin: 56px 0 8px;
-  box-shadow: var(--raise-l);
-  position: relative;
+  background: var(--bg); border: none; margin: 56px 0 8px; position: relative;
+  box-shadow:
+    inset 12px 12px 24px #050506, inset -12px -12px 24px #34343a,
+    0 0 0 1px rgba(255, 255, 255, .07);
+}
+.shoot:active {
+  box-shadow:
+    inset 12px 12px 24px #050506, inset -12px -12px 24px #34343a,
+    0 0 0 1px rgba(255, 255, 255, .07);
 }
 .shoot::after {
-  content: ''; position: absolute; inset: 22px; border-radius: 50%;
-  box-shadow: var(--press-s);
+  content: ''; position: absolute; inset: 40px; border-radius: 50%;
+  background: linear-gradient(145deg, #2e2e33, #17171a);
+  box-shadow:
+    8px 8px 16px #050506, -6px -6px 14px #3a3a41,
+    inset 0 0 0 1px rgba(255, 255, 255, .12);
+  transition: box-shadow .1s ease, transform .1s ease;
+}
+.shoot:active::after {
+  background: linear-gradient(145deg, #1c1c20, #232327);
+  box-shadow:
+    inset 5px 5px 10px #050506, inset -4px -4px 10px #34343a,
+    inset 0 0 0 1px rgba(255, 255, 255, .08);
+  transform: scale(.97);
 }
 .shoot:disabled { opacity: .4; }
 .cheat-banner { color: var(--yellow); font-size: 14px; margin: 8px 0 0; }
 
 /* ───────── 今天 / 待上傳 / 看單張 ───────── */
+/* 照片都是 3:4：框固定 3:4，寬度依螢幕高度縮，cover 填滿，不留黑邊 */
 #today-img, #pending-img, #view-img {
-  width: 100%; max-height: 60vh; object-fit: contain; border-radius: 16px;
+  display: block; align-self: center; width: min(100%, calc(62vh * 3 / 4)); aspect-ratio: 3 / 4;
+  height: auto; object-fit: cover; border-radius: 16px;
   background: var(--photo-bg); box-shadow: var(--raise-m); -webkit-touch-callout: default;
 }
 .info { margin: 16px 0 18px; }
