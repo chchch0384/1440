@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="1440測試">
+<title>1440 相機測試</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; color: #fff; font: 17px/1.5 -apple-system, sans-serif; }
+  video { width: 100%; height: 60vh; object-fit: cover; transform: scaleX(-1); background: #111; }
+  #log { padding: 16px; white-space: pre-line; }
+  b { color: #7CFC98; }
+</style>
+</head>
+<body>
+<video id="v" autoplay playsinline muted></video>
+<div id="log">正在開相機…</div>
+<script>
+  const t0 = performance.now();
+  const log = document.getElementById('log');
+  const standalone = window.navigator.standalone ? '主畫面模式' : 'Safari 模式（不是從主畫面開的）';
+  const n = (localStorage.getItem('opens') | 0) + 1;
+  localStorage.setItem('opens', n);
+
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+    .then(stream => {
+      const v = document.getElementById('v');
+      v.srcObject = stream;
+      v.onloadedmetadata = () => {
+        const sec = ((performance.now() - t0) / 1000).toFixed(2);
+        log.innerHTML =
+          `<b>相機畫面出現：${sec} 秒</b>\n` +
+          `${standalone}\n` +
+          `這台裝置第 ${n} 次打開這頁\n\n` +
+          `剛剛有沒有跳出「允許使用相機？」的視窗？請自己記下來。\n` +
+          `判斷標準：2 秒內出現、而且第 2 次以後不再重問 → 走路 A。`;
+      };
+    })
+    .catch(err => {
+      log.innerHTML = `<b>相機打不開</b>\n${standalone}\n錯誤：${err.name}\n\n` +
+        `如果是 NotAllowedError，代表權限被拒絕：設定 → Safari → 相機 → 允許。`;
+    });
+</script>
+</body>
+</html>
