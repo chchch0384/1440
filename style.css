@@ -6,24 +6,34 @@
   --faint: #48484a;
   --panel: #1c1c1e;
   --line: #2c2c2e;
-  --green: #4cd964;
-  --yellow: #ffd60a;
   --red: #ff453a;
+  --yellow: #ffd60a;
+  /* 唯一的強調色：夜裡亮起的窗 */
+  --accent: #f5b544;
+  --accent-dim: #6b4d1c;
+  --accent-glow: rgba(245, 181, 68, .18);
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 [hidden] { display: none !important; }
-html, body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 -apple-system, "PingFang TC", "Noto Sans TC", system-ui, sans-serif; }
+html, body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.5 "Lexend", -apple-system, "PingFang TC", "Noto Sans TC", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
 body { min-height: 100vh; min-height: 100dvh; }
 
+/* 畫面：淡入 */
 .screen {
   min-height: 100vh; min-height: 100dvh;
   display: flex; flex-direction: column;
   padding: calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+  opacity: 0; transition: opacity .18s ease;
 }
+.screen.in { opacity: 1; }
 .screen[hidden] { display: none; }
 .screen.center { align-items: center; justify-content: center; text-align: center; }
 
-h1.logo { font-size: 44px; margin: 24px 0 4px; letter-spacing: -.02em; }
+h1.logo { font-size: 44px; font-weight: 700; margin: 24px 0 4px; letter-spacing: -.02em; }
 .lead { font-size: 18px; margin: 0 0 12px; }
 .hint { color: var(--dim); font-size: 14px; margin: 8px 0; }
 .center-text { text-align: center; }
@@ -42,18 +52,28 @@ button:disabled { opacity: .5; }
 
 textarea { width: 100%; font: inherit; font-size: 14px; background: var(--panel); color: var(--fg); border: 1px solid #3a3a3c; border-radius: 12px; padding: 12px; margin: 8px 0 12px; word-break: break-all; }
 
-/* 拍照畫面 */
-.clock { font-size: 92px; font-weight: 700; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
-.minute-status { margin-top: 12px; font-size: 20px; color: var(--dim); }
-.minute-status.free { color: var(--green); }
+/* ───────── 拍照畫面 ───────── */
+.clock { font-size: 96px; font-weight: 700; letter-spacing: -.03em; line-height: 1; -webkit-user-select: none; user-select: none; }
+
+/* 狀態：前面一顆燈；空的時候亮琥珀色 */
+.minute-status { margin-top: 14px; font-size: 20px; color: var(--dim); min-height: 30px; }
+.minute-status::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--faint); margin-right: 10px; vertical-align: 2px; }
+.minute-status.free { color: var(--accent); }
+.minute-status.free::before { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
 .minute-status.owned { color: var(--dim); }
-.shoot { width: 180px; height: 180px; border-radius: 50%; background: #fff; color: #000; font-size: 60px; font-weight: 700; border: none; margin: 56px 0 12px; box-shadow: 0 0 0 10px var(--panel); }
+/* 還沒載入時：一條會呼吸的灰條，不是「…」 */
+.minute-status:empty::before { width: 120px; height: 12px; border-radius: 6px; background: var(--panel); margin: 0; box-shadow: none; animation: breathe 1.2s ease-in-out infinite; }
+@keyframes breathe { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
+
+.hour-progress { margin-top: 6px; font-size: 14px; color: var(--dim); min-height: 21px; }
+
+.shoot { width: 180px; height: 180px; border-radius: 50%; background: #fff; color: #000; font-size: 60px; font-weight: 700; border: none; margin: 52px 0 12px; box-shadow: 0 0 0 10px var(--accent-glow), 0 0 40px var(--accent-glow); }
 .shoot:active { transform: scale(.96); }
 .shoot:disabled { opacity: .4; }
 .cheat-banner { color: var(--yellow); margin: 0; }
 .bottom-links { margin-top: auto; padding-top: 24px; display: flex; gap: 24px; }
 
-/* 今天 / 待上傳 / 看單張 */
+/* ───────── 今天 / 待上傳 / 看單張 ───────── */
 #today-img, #pending-img, #view-img { width: 100%; max-height: 60vh; object-fit: contain; border-radius: 12px; background: #111; -webkit-touch-callout: default; }
 .info { margin: 12px 0 16px; }
 .title { font-size: 28px; font-weight: 700; }
@@ -61,18 +81,29 @@ textarea { width: 100%; font: inherit; font-size: 14px; background: var(--panel)
 .ask p { font-size: 18px; margin: 8px 0; }
 .cheat { margin-top: auto; align-self: flex-end; background: none; border: none; color: var(--faint); font-size: 13px; padding: 24px 0 0; }
 
-/* 總覽 / 小時書 共用列 */
+/* ───────── 總覽 / 小時書 共用列 ───────── */
 .bar { display: flex; align-items: center; justify-content: space-between; margin: -6px 0 10px; }
 .bar .back { background: none; border: none; font-size: 34px; line-height: 1; padding: 0 14px 4px 0; color: var(--fg); }
 .bar-spacer { width: 34px; }
 #wall-progress, #book-title { font-weight: 600; }
 
-/* 總覽 */
-#wall { display: block; margin: 0 auto; border-radius: 4px; background: #111; }
-.hour-labels { display: flex; margin: 0 auto 4px; font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums; }
+/* ───────── 總覽 ───────── */
+.wall-wrap { position: relative; margin: 0 auto; }
+#wall { display: block; border-radius: 4px; background: #111; }
+#wall-overlay { position: absolute; left: 0; top: 0; pointer-events: none; }
+.hour-labels { display: flex; margin: 0 auto 4px; font-size: 11px; color: var(--dim); }
 .hour-labels span { flex: 1; text-align: left; }
+.legend { color: var(--dim); font-size: 12px; margin: 4px 0; }
+.legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin: 0 5px 0 12px; vertical-align: -1px; }
+.legend .sw.now { border: 2px solid var(--accent); }
+.legend .sw.today { border: 1px solid #fff; }
 
-/* 小時書 */
+/* ───────── 小時書 ───────── */
+.dots { display: flex; gap: 3px; justify-content: center; margin: 0 0 12px; }
+.dots button { flex: 0 0 auto; width: 9px; height: 9px; padding: 0; border: none; border-radius: 50%; background: var(--line); transition: transform .15s ease, background .15s ease; }
+.dots button.has { background: var(--accent-dim); }
+.dots button.on { background: var(--fg); transform: scale(1.35); }
+
 .pages { display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; margin: 0 -16px; flex: 1; }
 .pages::-webkit-scrollbar { display: none; }
 .page { flex: 0 0 100%; scroll-snap-align: start; padding: 0 16px; }

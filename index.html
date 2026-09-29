@@ -11,7 +11,10 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="icon" href="icons/icon-192.png">
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=4">
 <title>1440</title>
 </head>
 <body>
@@ -25,13 +28,15 @@
   <button id="setup-save" class="primary">儲存並測試連線</button>
   <p id="setup-msg" class="msg"></p>
   <p class="hint">專屬連結在 Google 試算表「1440-紀錄」的「設定」分頁 B7。</p>
+  <p class="hint bottom center-text"><button id="setup-cancel" class="link" hidden>取消</button></p>
 </section>
 
 <!-- 拍照畫面 -->
 <section id="scr-shoot" class="screen center" hidden>
   <div class="clock-wrap">
     <div id="clock" class="clock">--:--</div>
-    <div id="minute-status" class="minute-status">…</div>
+    <div id="minute-status" class="minute-status"></div>
+    <div id="hour-progress" class="hour-progress"></div>
   </div>
   <button id="btn-shoot" class="shoot">拍</button>
   <input id="file" type="file" accept="image/*" capture="environment" hidden>
@@ -86,9 +91,12 @@
     <span class="bar-spacer"></span>
   </header>
   <div id="wall-labels" class="hour-labels"></div>
-  <canvas id="wall"></canvas>
+  <div id="wall-wrap" class="wall-wrap">
+    <canvas id="wall"></canvas>
+    <canvas id="wall-overlay"></canvas>
+  </div>
   <p class="hint center-text">點一欄翻到那一小時</p>
-  <p class="hint center-text bottom"><button id="wall-resetup" class="link">重新設定專屬連結</button></p>
+  <p class="legend center-text"><span class="sw now"></span>現在 <span class="sw today"></span>今天</p>
 </section>
 
 <!-- 小時書 -->
@@ -98,6 +106,7 @@
     <div id="book-title"></div>
     <span class="bar-spacer"></span>
   </header>
+  <div id="book-dots" class="dots"></div>
   <div id="book-pages" class="pages"></div>
 </section>
 
@@ -113,6 +122,6 @@
 </section>
 
 <div id="toast" hidden></div>
-<script src="app.js?v=3"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>

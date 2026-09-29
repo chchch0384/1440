@@ -9,6 +9,7 @@ var THUMB_BATCH = 60, MEDIUM_KEEP = 50, REFRESH_MS = 10 * 60 * 1000;
 // ───────────── 小工具 ─────────────
 
 var $ = function (id) { return document.getElementById(id); };
+var ACCENT = '#f5b544', ACCENT_DIM = '#6b4d1c';   // 唯一的強調色，跟 style.css 的 --accent 一樣
 function two(n) { return (n < 10 ? '0' : '') + n; }
 function fmtDate(d) { return d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate()); }
 function fmtMinute(d) { return two(d.getHours()) + ':' + two(d.getMinutes()); }
@@ -223,6 +224,11 @@ function setRows(list) {
 }
 function todayRows() { var t = fmtDate(new Date()); return rows.filter(function (r) { return r.date === t; }); }
 function litCount() { return Object.keys(byMinute).length; }
+function hourCount(h) {
+  var n = 0, hh = two(h);
+  for (var m = 0; m < 60; m++) if (byMinute[hh + ':' + two(m)]) n++;
+  return n;
+}
 function loadRowsCache() {
   try {
     var c = JSON.parse(localStorage.getItem('rows') || 'null');
@@ -324,10 +330,12 @@ function resizeToBlob(img, max, q, square) {
 var current = null, stack = [];
 function show(id) {
   if (current === id) return;
-  if (current) $(current).hidden = true;
-  $(id).hidden = false;
+  if (current) { $(current).hidden = true; $(current).classList.remove('in'); }
+  var el = $(id);
+  el.hidden = false;
   current = id;
   window.scrollTo(0, 0);
+  requestAnimationFrame(function () { el.classList.add('in'); });
 }
 function go(id) { if (current) stack.push(current); show(id); }
 function back() {
@@ -354,6 +362,7 @@ function showSetup() {
   show('scr-setup');
   $('setup-warn').hidden = standalone;
   $('setup-msg').textContent = '';
+  $('setup-cancel').hidden = !cfg;
 }
 $('setup-save').onclick = function () {
   var c = parseLink($('setup-link').value);
@@ -373,7 +382,24 @@ $('setup-save').onclick = function () {
     msg.textContent = '連不上：' + errMsg(e);
   }).then(function () { $('setup-save').disabled = false; });
 };
-$('wall-resetup').onclick = function () { showSetup(); };
+$('setup-cancel').onclick = function () { home(); };
+
+// 長按時鐘 1 秒 → 重新設定專屬連結（藏起來，不佔畫面）
+(function () {
+  var timer = 0, el = $('clock');
+  function start() {
+    timer = setTimeout(function () {
+      timer = 0;
+      if (confirm('要重新設定專屬連結嗎？')) showSetup();
+    }, 1000);
+  }
+  function stop() { if (timer) { clearTimeout(timer); timer = 0; } }
+  el.addEventListener('touchstart', start, { passive: true });
+  el.addEventListener('touchend', stop);
+  el.addEventListener('touchcancel', stop);
+  el.addEventListener('touchmove', stop);
+  el.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+})();
 
 // ───────────── 拍照畫面 ─────────────
 
@@ -386,14 +412,17 @@ function showShoot(cheat) {
   show('scr-shoot');
   tick();
 }
+var lastWallMinute = '';
 function tick() {
   var d = new Date(), m = fmtMinute(d);
   $('clock').textContent = m;
+  if (current === 'scr-wall' && m !== lastWallMinute) { lastWallMinute = m; drawWallMarkers(); }
   if (current !== 'scr-shoot') return;
   var owned = !!byMinute[m];
   var el = $('minute-status');
-  el.textContent = owned ? '⚪ ' + m + ' 已擁有' : '🟢 ' + m + ' 空的';
+  el.textContent = m + (owned ? ' 已擁有' : ' 空的');
   el.className = 'minute-status ' + (owned ? 'owned' : 'free');
+  $('hour-progress').textContent = '這一小時 ' + hourCount(d.getHours()) + ' / 60';
 }
 setInterval(tick, 1000);
 
@@ -591,13 +620,14 @@ function renderWall() {
   var dpr = window.devicePixelRatio || 1;
   canvas.style.width = CELL * 24 + 'px';
   canvas.style.height = CELL * 60 + 'px';
+  $('wall-wrap').style.width = CELL * 24 + 'px';
   canvas.width = CELL * 24 * dpr;
   canvas.height = CELL * 60 * dpr;
   var ctx = canvas.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.fillStyle = '#111';
   ctx.fillRect(0, 0, CELL * 24, CELL * 60);
-  ctx.fillStyle = '#3a3a3c';
+  ctx.fillStyle = ACCENT_DIM;
   Object.keys(byMinute).forEach(function (m) {
     ctx.fillRect(+m.slice(0, 2) * CELL, +m.slice(3) * CELL, CELL - 1, CELL - 1);
   });
@@ -606,7 +636,34 @@ function renderWall() {
   labels.innerHTML = '';
   for (var h = 0; h < 24; h++) { var s = document.createElement('span'); s.textContent = h % 6 === 0 ? h : ''; labels.appendChild(s); }
   $('wall-progress').textContent = '已收集 ' + litCount() + ' / 1440';
+  lastWallMinute = '';
+  drawWallMarkers();
   drawWallThumbs();
+}
+
+// 標記層：畫在另一張覆蓋的畫布上，不會被拼貼快取蓋掉
+function drawWallMarkers() {
+  var ov = $('wall-overlay'), dpr = window.devicePixelRatio || 1;
+  var w = CELL * 24, h = CELL * 60;
+  ov.style.width = w + 'px';
+  ov.style.height = h + 'px';
+  ov.width = w * dpr;
+  ov.height = h * dpr;
+  var ctx = ov.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  // 今天拍的格子：細白框
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1;
+  todayRows().forEach(function (r) {
+    var mn = r.minute;
+    ctx.strokeRect(+mn.slice(0, 2) * CELL + .5, +mn.slice(3) * CELL + .5, CELL - 2, CELL - 2);
+  });
+  // 現在這一分鐘：琥珀色粗框
+  var now = fmtMinute(new Date());
+  ctx.strokeStyle = ACCENT;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(+now.slice(0, 2) * CELL - .5, +now.slice(3) * CELL - .5, CELL + 1, CELL + 1);
 }
 
 // 拼貼存成一張圖片快取，之後只補畫新格子
@@ -625,7 +682,7 @@ function drawWallThumbs() {
       Object.keys(drawn).forEach(function (id) {
         var mn = drawn[id];
         if (!byMinute[mn] || byMinute[mn].thumb_id !== id) {
-          ctx.fillStyle = byMinute[mn] ? '#3a3a3c' : '#111';
+          ctx.fillStyle = byMinute[mn] ? ACCENT_DIM : '#111';
           ctx.fillRect(+mn.slice(0, 2) * CELL, +mn.slice(3) * CELL, CELL - 1, CELL - 1);
           delete drawn[id];
         }
@@ -717,10 +774,29 @@ function buildBook() {
   bookDirty = false;
 }
 function updateBookTitle(h) {
-  var n = 0;
-  for (var m = 0; m < 60; m++) if (byMinute[two(h) + ':' + two(m)]) n++;
-  $('book-title').textContent = h + ' 點 · 已收 ' + n + ' / 60';
+  $('book-title').textContent = h + ' 點 · 已收 ' + hourCount(h) + ' / 60';
+  Array.prototype.forEach.call($('book-dots').children, function (b, i) {
+    b.classList.toggle('on', i === h);
+    b.classList.toggle('has', hourCount(i) > 0);
+  });
 }
+function buildBookDots() {
+  var d = $('book-dots');
+  d.innerHTML = '';
+  for (var h = 0; h < 24; h++) {
+    var b = document.createElement('button');
+    b.dataset.hour = h;
+    b.setAttribute('aria-label', h + ' 點');
+    d.appendChild(b);
+  }
+}
+buildBookDots();
+$('book-dots').addEventListener('click', function (e) {
+  var b = e.target.closest ? e.target.closest('button') : null;
+  if (!b) return;
+  var pages = $('book-pages');
+  pages.scrollTo({ left: +b.dataset.hour * pages.clientWidth, behavior: 'smooth' });
+});
 function loadVisiblePages() {
   var pages = $('book-pages').children;
   for (var h = Math.max(0, bookHour - 1); h <= Math.min(23, bookHour + 1); h++) {
