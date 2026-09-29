@@ -1,17 +1,28 @@
 :root {
   color-scheme: dark;
-  --bg: #000;
-  --fg: #fff;
+  /* 深色 Soft UI：底色不是純黑，陰影才看得見 */
+  --bg: #1a1a1c;
+  --shadow-d: #0d0d0e;   /* 暗的那道陰影 */
+  --shadow-l: #272729;   /* 亮的那道陰影 */
+  --photo-bg: #0b0b0c;   /* 照片和拼貼的底，比頁面更黑，照片才是主角 */
+  --fg: #f2f2f4;
   --dim: #8e8e93;
-  --faint: #48484a;
-  --panel: #1c1c1e;
+  --faint: #4a4a4d;
   --line: #2c2c2e;
   --red: #ff453a;
   --yellow: #ffd60a;
-  /* 唯一的強調色：夜裡亮起的窗 */
+  /* 唯一的強調色：機器上的指示燈 */
   --accent: #f5b544;
   --accent-dim: #6b4d1c;
   --accent-glow: rgba(245, 181, 68, .18);
+
+  /* 浮起 / 壓下，三種尺寸 */
+  --raise-s: 4px 4px 8px var(--shadow-d), -4px -4px 8px var(--shadow-l);
+  --raise-m: 7px 7px 14px var(--shadow-d), -7px -7px 14px var(--shadow-l);
+  --raise-l: 14px 14px 28px var(--shadow-d), -14px -14px 28px var(--shadow-l);
+  --press-s: inset 3px 3px 6px var(--shadow-d), inset -3px -3px 6px var(--shadow-l);
+  --press-m: inset 6px 6px 12px var(--shadow-d), inset -6px -6px 12px var(--shadow-l);
+  --press-l: inset 10px 10px 20px var(--shadow-d), inset -10px -10px 20px var(--shadow-l);
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 [hidden] { display: none !important; }
@@ -26,7 +37,7 @@ body { min-height: 100vh; min-height: 100dvh; }
 .screen {
   min-height: 100vh; min-height: 100dvh;
   display: flex; flex-direction: column;
-  padding: calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+  padding: calc(16px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) calc(20px + env(safe-area-inset-left));
   opacity: 0; transition: opacity .18s ease;
 }
 .screen.in { opacity: 1; }
@@ -41,76 +52,113 @@ h1.logo { font-size: 44px; font-weight: 700; margin: 24px 0 4px; letter-spacing:
 .msg { min-height: 1.5em; margin: 8px 0; }
 .warn { color: var(--yellow); font-size: 14px; }
 
-button { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid #3a3a3c; border-radius: 12px; padding: 14px 18px; }
-button.primary { background: var(--fg); color: #000; border-color: var(--fg); font-weight: 600; }
-button.link { background: none; border: none; color: var(--dim); padding: 8px; text-decoration: underline; font-size: 15px; }
+/* ───────── 按鈕：浮起，按下去壓進去 ───────── */
+button {
+  font: inherit; color: var(--fg); background: var(--bg); border: none; border-radius: 16px;
+  padding: 15px 18px; box-shadow: var(--raise-m); transition: box-shadow .12s ease, color .12s ease;
+}
+button:active { box-shadow: var(--press-m); }
+button.primary { color: var(--accent); font-weight: 600; }
+button.link { background: none; border: none; box-shadow: none; color: var(--dim); padding: 8px; text-decoration: underline; font-size: 15px; }
+button.link:active { box-shadow: none; color: var(--fg); }
 button.danger { color: var(--red); }
 button:disabled { opacity: .5; }
-.row { display: flex; gap: 12px; margin: 8px 0; }
+.row { display: flex; gap: 16px; margin: 10px 0; }
 .row > button { flex: 1; }
-.row.big > button { padding: 18px; font-size: 18px; }
+.row.big > button { padding: 20px; font-size: 18px; }
 
-textarea { width: 100%; font: inherit; font-size: 14px; background: var(--panel); color: var(--fg); border: 1px solid #3a3a3c; border-radius: 12px; padding: 12px; margin: 8px 0 12px; word-break: break-all; }
+/* 輸入框：壓進底板 */
+textarea {
+  width: 100%; font: inherit; font-size: 14px; background: var(--bg); color: var(--fg);
+  border: none; border-radius: 16px; padding: 14px; margin: 10px 0 16px; word-break: break-all;
+  box-shadow: var(--press-s); outline: none;
+}
 
 /* ───────── 拍照畫面 ───────── */
 .clock { font-size: 96px; font-weight: 700; letter-spacing: -.03em; line-height: 1; -webkit-user-select: none; user-select: none; }
 
-/* 狀態：前面一顆燈；空的時候亮琥珀色 */
+/* 狀態：一顆指示燈，空的時候亮琥珀色 */
 .minute-status { margin-top: 14px; font-size: 20px; color: var(--dim); min-height: 30px; }
-.minute-status::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--faint); margin-right: 10px; vertical-align: 2px; }
+.minute-status::before {
+  content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--bg); box-shadow: var(--press-s); margin-right: 10px; vertical-align: 2px;
+}
 .minute-status.free { color: var(--accent); }
 .minute-status.free::before { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
 .minute-status.owned { color: var(--dim); }
-/* 還沒載入時：一條會呼吸的灰條，不是「…」 */
-.minute-status:empty::before { width: 120px; height: 12px; border-radius: 6px; background: var(--panel); margin: 0; box-shadow: none; animation: breathe 1.2s ease-in-out infinite; }
+.minute-status:empty::before { width: 120px; height: 12px; border-radius: 6px; margin: 0; animation: breathe 1.2s ease-in-out infinite; }
 @keyframes breathe { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
 
 .hour-progress { margin-top: 6px; font-size: 14px; color: var(--dim); min-height: 21px; }
 
-.shoot { width: 180px; height: 180px; border-radius: 50%; background: #fff; color: #000; font-size: 60px; font-weight: 700; border: none; margin: 52px 0 12px; box-shadow: 0 0 0 10px var(--accent-glow), 0 0 40px var(--accent-glow); }
-.shoot:active { transform: scale(.96); }
+/* 快門：一顆實體按鈕 */
+.shoot {
+  width: 184px; height: 184px; border-radius: 50%;
+  background: var(--bg); color: var(--fg); font-size: 60px; font-weight: 700; border: none;
+  margin: 56px 0 16px; box-shadow: var(--raise-l);
+  transition: box-shadow .1s ease, transform .1s ease;
+}
+.shoot:active { box-shadow: var(--press-l); transform: scale(.985); }
 .shoot:disabled { opacity: .4; }
 .cheat-banner { color: var(--yellow); margin: 0; }
 .bottom-links { margin-top: auto; padding-top: 24px; display: flex; gap: 24px; }
 
-/* ───────── 今天 / 待上傳 / 看單張 ───────── */
-#today-img, #pending-img, #view-img { width: 100%; max-height: 60vh; object-fit: contain; border-radius: 12px; background: #111; -webkit-touch-callout: default; }
-.info { margin: 12px 0 16px; }
+/* ───────── 今天 / 待上傳 / 看單張：照片是主角，維持深色 ───────── */
+#today-img, #pending-img, #view-img {
+  width: 100%; max-height: 60vh; object-fit: contain; border-radius: 16px;
+  background: var(--photo-bg); box-shadow: var(--raise-m); -webkit-touch-callout: default;
+}
+.info { margin: 16px 0 18px; }
 .title { font-size: 28px; font-weight: 700; }
 .sub { color: var(--dim); }
 .ask p { font-size: 18px; margin: 8px 0; }
-.cheat { margin-top: auto; align-self: flex-end; background: none; border: none; color: var(--faint); font-size: 13px; padding: 24px 0 0; }
+.cheat { margin-top: auto; align-self: flex-end; background: none; border: none; box-shadow: none; color: var(--faint); font-size: 13px; padding: 24px 0 0; }
+.cheat:active { box-shadow: none; }
 
 /* ───────── 總覽 / 小時書 共用列 ───────── */
-.bar { display: flex; align-items: center; justify-content: space-between; margin: -6px 0 10px; }
-.bar .back { background: none; border: none; font-size: 34px; line-height: 1; padding: 0 14px 4px 0; color: var(--fg); }
-.bar-spacer { width: 34px; }
+.bar { display: flex; align-items: center; justify-content: space-between; margin: 0 0 14px; }
+.bar .back {
+  width: 42px; height: 42px; padding: 0 0 4px; border-radius: 50%;
+  font-size: 30px; line-height: 1; color: var(--fg); box-shadow: var(--raise-s);
+}
+.bar .back:active { box-shadow: var(--press-s); }
+.bar-spacer { width: 42px; }
 #wall-progress, #book-title { font-weight: 600; }
 
-/* ───────── 總覽 ───────── */
-.wall-wrap { position: relative; margin: 0 auto; }
-#wall { display: block; border-radius: 4px; background: #111; }
+/* ───────── 總覽：拼貼像一塊浮起的板子 ───────── */
+.wall-wrap { position: relative; margin: 0 auto; border-radius: 6px; box-shadow: var(--raise-m); }
+#wall { display: block; border-radius: 6px; background: var(--photo-bg); }
 #wall-overlay { position: absolute; left: 0; top: 0; pointer-events: none; }
-.hour-labels { display: flex; margin: 0 auto 4px; font-size: 11px; color: var(--dim); }
+.hour-labels { display: flex; margin: 0 auto 6px; font-size: 11px; color: var(--dim); }
 .hour-labels span { flex: 1; text-align: left; }
-.legend { color: var(--dim); font-size: 12px; margin: 4px 0; }
+.legend { color: var(--dim); font-size: 12px; margin: 14px 0 4px; }
 .legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin: 0 5px 0 12px; vertical-align: -1px; }
 .legend .sw.now { border: 2px solid var(--accent); }
 .legend .sw.today { border: 1px solid #fff; }
 
 /* ───────── 小時書 ───────── */
-.dots { display: flex; gap: 3px; justify-content: center; margin: 0 0 12px; }
-.dots button { flex: 0 0 auto; width: 9px; height: 9px; padding: 0; border: none; border-radius: 50%; background: var(--line); transition: transform .15s ease, background .15s ease; }
-.dots button.has { background: var(--accent-dim); }
-.dots button.on { background: var(--fg); transform: scale(1.35); }
+.dots { display: flex; gap: 3px; justify-content: center; margin: 0 0 14px; }
+.dots button {
+  flex: 0 0 auto; width: 9px; height: 9px; padding: 0; border-radius: 50%;
+  background: var(--bg); box-shadow: var(--press-s); transition: transform .15s ease, background .15s ease;
+}
+.dots button:active { box-shadow: var(--press-s); }
+.dots button.has { background: var(--accent-dim); box-shadow: none; }
+.dots button.on { background: var(--fg); box-shadow: none; transform: scale(1.35); }
 
-.pages { display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; margin: 0 -16px; flex: 1; }
+.pages { display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; margin: 0 -20px; flex: 1; }
 .pages::-webkit-scrollbar { display: none; }
-.page { flex: 0 0 100%; scroll-snap-align: start; padding: 0 16px; }
-.grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
-.cell { aspect-ratio: 1; background: #0e0e0e; border: 1px solid var(--line); border-radius: 6px; position: relative; overflow: hidden; }
+.page { flex: 0 0 100%; scroll-snap-align: start; padding: 4px 20px; }
+.grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+/* 沒收到的格子：壓進底板；收到的：照片浮起 */
+.cell { aspect-ratio: 1; background: var(--bg); border-radius: 8px; position: relative; overflow: hidden; box-shadow: var(--press-s); }
+.cell.lit { background: var(--photo-bg); box-shadow: var(--raise-s); }
 .cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.cell span { position: absolute; left: 4px; bottom: 1px; font-size: 10px; color: var(--faint); }
+.cell span { position: absolute; left: 5px; bottom: 2px; font-size: 10px; color: var(--faint); }
 .cell.lit span { color: #fff; text-shadow: 0 0 3px #000, 0 0 3px #000; }
 
-#toast { position: fixed; left: 50%; bottom: calc(40px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: #fff; color: #000; padding: 10px 18px; border-radius: 22px; font-weight: 600; max-width: 90vw; text-align: center; z-index: 9; }
+#toast {
+  position: fixed; left: 50%; bottom: calc(40px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  background: var(--bg); color: var(--fg); padding: 12px 20px; border-radius: 24px; font-weight: 600;
+  max-width: 90vw; text-align: center; z-index: 9; box-shadow: var(--raise-m);
+}
