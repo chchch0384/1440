@@ -86,11 +86,14 @@ textarea {
 
 .shoot {
   width: 184px; height: 184px; border-radius: 50%;
-  background: var(--bg); color: var(--fg); font-size: 60px; font-weight: 700; border: none;
-  margin: 56px 0 8px; box-shadow: var(--raise-l);
-  transition: box-shadow .1s ease, transform .1s ease;
+  background: var(--bg); border: none; margin: 56px 0 8px;
+  box-shadow: var(--raise-l);
+  position: relative;
 }
-.shoot:active { box-shadow: var(--press-l); transform: scale(.985); }
+.shoot::after {
+  content: ''; position: absolute; inset: 22px; border-radius: 50%;
+  box-shadow: var(--press-s);
+}
 .shoot:disabled { opacity: .4; }
 .cheat-banner { color: var(--yellow); font-size: 14px; margin: 8px 0 0; }
 
